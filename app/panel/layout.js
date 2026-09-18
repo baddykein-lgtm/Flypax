@@ -42,7 +42,6 @@ export default function PanelLayout({ children }) {
         .maybeSingle();
 
       if (error || !data) {
-        // Tiene cuenta pero no ha terminado el onboarding
         router.push("/onboarding");
         return;
       }
@@ -74,11 +73,8 @@ export default function PanelLayout({ children }) {
     <BusinessContext.Provider value={{ business, setBusiness, cfg }}>
       <div className="min-h-screen bg-paper text-[#1B2A22] grid grid-cols-[250px_1fr]">
         <aside className="bg-ink text-[#F4EFE3] p-5 flex flex-col">
-          <div className="flex items-center gap-2 font-display font-bold text-lg mb-6 px-1">
-            <span className="w-6 h-6 rounded-md bg-mustard flex items-center justify-center text-ink text-xs">
-              🚪
-            </span>
-            Flypax
+          <div className="mb-6 px-1">
+            <img src="/logo.png" alt="Flypax" className="h-6 w-auto" />
           </div>
 
           <div className="bg-white/5 rounded-xl p-3 flex items-center gap-2.5 mb-5">

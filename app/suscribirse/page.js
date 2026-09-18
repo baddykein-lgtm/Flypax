@@ -18,13 +18,11 @@ export default function SuscribirsePage() {
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // businessId todavía no existe en este punto — se crea en el
-        // onboarding, justo después de pagar. Por ahora viaja vacío.
         body: JSON.stringify({ email, businessId: "" }),
       });
       const data = await res.json();
       if (data.url) {
-        window.location.href = data.url; // redirige a Stripe Checkout
+        window.location.href = data.url;
       } else {
         setError("No se pudo iniciar el pago. Revisa las claves de Stripe en .env.local");
       }
@@ -38,6 +36,9 @@ export default function SuscribirsePage() {
   return (
     <main className="min-h-screen flex items-center justify-center px-6">
       <div className="w-full max-w-sm bg-[#1E332B] border border-white/10 rounded-2xl p-8">
+        <div className="flex justify-center mb-6">
+          <img src="/logo.png" alt="Flypax" className="h-7 w-auto" />
+        </div>
         <h1 className="font-display text-2xl mb-1">Suscripción a Flypax</h1>
         <p className="text-white/55 text-sm mb-6">19,99€/mes · sin permanencia</p>
 

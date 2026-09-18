@@ -30,6 +30,7 @@ export default function OnboardingPage() {
   const [icon, setIcon] = useState("💈");
   const [slug, setSlug] = useState("");
   const [slugTouched, setSlugTouched] = useState(false);
+  const [city, setCity] = useState("");
   const [days, setDays] = useState([true, true, true, true, true, true, false]);
   const [answers, setAnswers] = useState({});
   const [email, setEmail] = useState("");
@@ -56,6 +57,10 @@ export default function OnboardingPage() {
       setError("Ponle un nombre a tu negocio");
       return;
     }
+    if (step === 2 && !city.trim()) {
+      setError("Necesitamos tu ciudad para el directorio");
+      return;
+    }
     setError("");
     setStep((s) => s + 1);
   }
@@ -72,7 +77,6 @@ export default function OnboardingPage() {
     setError("");
     setLoading(true);
 
-    // 1. Crear la cuenta del negocio en Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
@@ -83,9 +87,6 @@ export default function OnboardingPage() {
       return;
     }
 
-    // Si tienes activada la confirmación por email en Supabase, authData.session
-    // vendrá vacío hasta que el usuario confirme el correo. Para probar rápido
-    // en desarrollo, puedes desactivar "Confirm email" en Authentication > Sign In / Providers.
     const userId = authData.user?.id;
     if (!userId) {
       setError("Cuenta creada. Revisa tu email para confirmarla y luego inicia sesión.");
@@ -93,19 +94,35 @@ export default function OnboardingPage() {
       return;
     }
 
-    // 2. Construir horario y perfil a partir de las respuestas
+    let latitude = null;
+    let longitude = null;
+    try {
+      const geoRes = await fetch("/api/geocode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ city }),
+      });
+      if (geoRes.ok) {
+        const geoData = await geoRes.json();
+        latitude = geoData.latitude;
+        longitude = geoData.longitude;
+      }
+    } catch (e) {}
+
     const hours = {};
     DIAS_FULL.forEach((_, i) => {
       hours[i] = days[i] ? (categoryId === "restaurante" ? "13:00–16:30" : "9:30–20:00") : null;
     });
 
-    // 3. Crear el negocio
     const { error: insertError } = await supabase.from("businesses").insert({
       owner_id: userId,
       name,
       category_id: categoryId,
       icon,
       slug: effectiveSlug,
+      city,
+      latitude,
+      longitude,
       hours,
       profile: answers,
     });
@@ -117,13 +134,15 @@ export default function OnboardingPage() {
       return;
     }
 
-    // El panel (/panel) todavía no está construido — es el siguiente paso.
     router.push("/panel");
   }
 
   return (
     <main className="min-h-screen flex items-center justify-center px-6 py-10">
       <div className="w-full max-w-lg bg-[#1E332B] border border-white/10 rounded-2xl p-8">
+        <div className="flex justify-center mb-6">
+          <img src="/logo.png" alt="Flypax" className="h-7 w-auto" />
+        </div>
         <div className="flex gap-1.5 mb-8">
           {[1, 2, 3, 4].map((n) => (
             <div
@@ -180,7 +199,7 @@ export default function OnboardingPage() {
           <div>
             <h2 className="font-display text-xl mb-5">Así verán tu negocio tus clientes</h2>
             <div className="bg-[#284137] rounded-lg px-3.5 py-2.5 text-sm mb-4">
-              flypax.app/<b className="text-mustard">{effectiveSlug}</b>
+              flypax.online/<b className="text-mustard">{effectiveSlug}</b>
             </div>
             <label className="block text-xs font-semibold text-white/60 mb-2">Editar link</label>
             <input
@@ -191,8 +210,19 @@ export default function OnboardingPage() {
                 setSlug(slugify(e.target.value));
               }}
               placeholder={slugify(name)}
+              className="w-full bg-[#16231D] border border-white/15 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-mustard mb-5"
+            />
+            <label className="block text-xs font-semibold text-white/60 mb-2">Ciudad</label>
+            <input
+              type="text"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              placeholder="Ej. Alcalá de Henares"
               className="w-full bg-[#16231D] border border-white/15 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-mustard"
             />
+            <p className="text-xs text-white/40 mt-2">
+              Así aparecerás en el directorio de negocios cercanos a tus clientes.
+            </p>
           </div>
         )}
 

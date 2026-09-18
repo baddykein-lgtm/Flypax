@@ -26,6 +26,9 @@ export default function LoginPage() {
   return (
     <main className="min-h-screen flex items-center justify-center px-6 bg-ink text-[#F4EFE3]">
       <div className="w-full max-w-sm bg-[#1E332B] border border-white/10 rounded-2xl p-8">
+        <div className="flex justify-center mb-6">
+          <img src="/logo.png" alt="Flypax" className="h-7 w-auto" />
+        </div>
         <h1 className="font-display text-2xl mb-1">Entrar en tu panel</h1>
         <p className="text-white/55 text-sm mb-6">Accede con tu email y contraseña</p>
 
