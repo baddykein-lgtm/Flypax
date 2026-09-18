@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -41,7 +41,7 @@ export default function AdminBusinessDetail({ params }) {
   if (loading)
     return (
       <div className="min-h-screen flex items-center justify-center bg-ink text-white/50 text-sm">
-        Cargando…
+        Cargando...
       </div>
     );
   if (denied || !data?.business)
@@ -52,11 +52,12 @@ export default function AdminBusinessDetail({ params }) {
     );
 
   const { business, products, reservations, orders, invoices } = data;
+  const publicUrl = "/" + business.slug;
 
   return (
     <main className="min-h-screen bg-paper text-[#1B2A22] p-8">
       <Link href="/admin" className="text-sm font-semibold text-[#5b6b60] mb-4 inline-block">
-        ← Volver al listado
+         Volver al listado
       </Link>
 
       <div className="flex items-center justify-between flex-wrap gap-3 mb-8">
@@ -67,18 +68,11 @@ export default function AdminBusinessDetail({ params }) {
           <div>
             <h1 className="font-display text-2xl">{business.name}</h1>
             <p className="text-sm text-[#5b6b60]">
-              {business.category_id} · {business.city || "sin ciudad"}
+              {business.category_id} - {business.city || "sin ciudad"}
             </p>
           </div>
         </div>
-        
-          href={`/${business.slug}`}
-          target="_blank"
-          rel="noreferrer"
-          className="bg-mustard text-ink font-semibold px-5 py-2.5 rounded-full text-sm"
-        >
-          Ver página pública →
-        </a>
+        <a href={publicUrl} target="_blank" rel="noreferrer" className="bg-mustard text-ink font-semibold px-5 py-2.5 rounded-full text-sm">Ver pagina publica</a>
       </div>
 
       <div className="grid grid-cols-4 gap-3.5 mb-8">
@@ -90,23 +84,23 @@ export default function AdminBusinessDetail({ params }) {
 
       <Section title="Carta y productos">
         {products.length === 0 ? (
-          <Empty text="Sin productos todavía." />
+          <Empty text="Sin productos todavia." />
         ) : (
           products.map((p) => (
-            <Row key={p.id} left={`${p.emoji} ${p.name}`} sub={p.category} right={`${p.price}€`} />
+            <Row key={p.id} left={`${p.emoji} ${p.name}`} sub={p.category} right={`${p.price} EUR`} />
           ))
         )}
       </Section>
 
       <Section title="Reservas">
         {reservations.length === 0 ? (
-          <Empty text="Sin reservas todavía." />
+          <Empty text="Sin reservas todavia." />
         ) : (
           reservations.map((r) => (
             <Row
               key={r.id}
               left={r.client_name}
-              sub={`${r.date} · ${r.time}${r.people ? ` · ${r.people} personas` : r.detail ? ` · ${r.detail}` : ""}`}
+              sub={`${r.date} - ${r.time}${r.people ? ` - ${r.people} personas` : r.detail ? ` - ${r.detail}` : ""}`}
               right={r.status}
             />
           ))
@@ -119,8 +113,8 @@ export default function AdminBusinessDetail({ params }) {
             <Row
               key={o.id}
               left={`Mesa ${o.table_number}`}
-              sub={(o.items || []).map((l) => `${l.qty}× ${l.name}`).join(", ")}
-              right={`${o.total}€ · ${o.status}`}
+              sub={(o.items || []).map((l) => `${l.qty}x ${l.name}`).join(", ")}
+              right={`${o.total} EUR - ${o.status}`}
             />
           ))}
         </Section>
@@ -128,14 +122,14 @@ export default function AdminBusinessDetail({ params }) {
 
       <Section title="Facturas">
         {invoices.length === 0 ? (
-          <Empty text="Sin facturas todavía." />
+          <Empty text="Sin facturas todavia." />
         ) : (
           invoices.map((i) => (
             <Row
               key={i.id}
               left={i.client_name}
               sub={i.date}
-              right={`${Number(i.total).toFixed(2)}€ · ${i.paid ? "Cobrada" : "Pendiente"}`}
+              right={`${Number(i.total).toFixed(2)} EUR - ${i.paid ? "Cobrada" : "Pendiente"}`}
             />
           ))
         )}
