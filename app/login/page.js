@@ -14,13 +14,23 @@ export default function LoginPage() {
   async function handleLogin() {
     setError("");
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
+      setLoading(false);
       setError("Email o contraseña incorrectos");
       return;
     }
-    router.push("/panel");
+
+    const token = data.session.access_token;
+    const res = await fetch("/api/admin/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
+    });
+    const { isAdmin } = await res.json();
+
+    setLoading(false);
+    router.push(isAdmin ? "/admin" : "/panel");
   }
 
   return (

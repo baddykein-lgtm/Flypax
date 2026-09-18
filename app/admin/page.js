@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 
 export default function AdminPage() {
@@ -63,9 +64,10 @@ export default function AdminPage() {
       <div className="bg-white border border-black/10 rounded-xl overflow-hidden">
         <div className="px-5 py-4 border-b border-black/10 font-semibold text-sm">Negocios registrados</div>
         {data.businesses.map((b) => (
-          <div
+          <Link
             key={b.id}
-            className="px-5 py-3 border-b border-black/10 last:border-0 flex items-center justify-between text-sm"
+            href={`/admin/${b.id}`}
+            className="px-5 py-3 border-b border-black/10 last:border-0 flex items-center justify-between text-sm hover:bg-[#F0ECE1] transition"
           >
             <div className="flex items-center gap-2">
               <span>{b.icon}</span>
@@ -77,7 +79,7 @@ export default function AdminPage() {
             <span className="text-xs text-[#5b6b60]">
               {new Date(b.created_at).toLocaleDateString("es-ES")}
             </span>
-          </div>
+          </Link>
         ))}
       </div>
     </main>
