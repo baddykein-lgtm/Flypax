@@ -3,8 +3,6 @@
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 
-// Arregla las rutas de los iconos por defecto de Leaflet, que se rompen
-// con los bundlers modernos (Next.js incluido) si no se apuntan a mano.
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
@@ -15,7 +13,7 @@ L.Icon.Default.mergeOptions({
 export default function MapView({ businesses }) {
   const center = businesses.length
     ? [businesses[0].latitude, businesses[0].longitude]
-    : [40.482, -3.363]; // Alcalá de Henares, por defecto si no hay negocios aún
+    : [40.482, -3.363];
 
   return (
     <MapContainer
