@@ -1,4 +1,8 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { detectCountry } from "@/lib/geo";
 
 const FEATURES = [
   { icon: "📅", title: "Reservas y citas", text: "Tus clientes reservan mesa o piden cita desde tu propia página, sin llamadas." },
@@ -10,6 +14,12 @@ const FEATURES = [
 ];
 
 export default function LandingPage() {
+  const [geo, setGeo] = useState(null);
+
+  useEffect(() => {
+    setGeo(detectCountry());
+  }, []);
+
   return (
     <main>
       <nav className="max-w-6xl mx-auto flex items-center justify-between px-6 py-6">
@@ -17,12 +27,19 @@ export default function LandingPage() {
           <span className="w-7 h-7 rounded-lg bg-mustard flex items-center justify-center text-ink text-sm">🚪</span>
           Flypax
         </div>
-        <Link
-          href="/suscribirse"
-          className="bg-mustard text-ink font-semibold text-sm px-5 py-2.5 rounded-full"
-        >
-          Suscribirme
-        </Link>
+        <div className="flex items-center gap-4">
+          {geo && (
+            <span className="text-xs text-white/50 hidden sm:inline">
+              {geo.flag} {geo.country}
+            </span>
+          )}
+          <Link
+            href="/suscribirse"
+            className="bg-mustard text-ink font-semibold text-sm px-5 py-2.5 rounded-full"
+          >
+            Suscribirme
+          </Link>
+        </div>
       </nav>
 
       <section className="max-w-6xl mx-auto px-6 py-16 grid md:grid-cols-2 gap-12 items-center">
