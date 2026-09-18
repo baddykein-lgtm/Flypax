@@ -32,6 +32,9 @@ export default function LandingPage() {
               {geo.flag} {geo.country}
             </span>
           )}
+          <Link href="/login" className="text-white/60 text-sm font-semibold hover:text-white">
+            Iniciar sesión
+          </Link>
           <Link
             href="/suscribirse"
             className="bg-mustard text-ink font-semibold text-sm px-5 py-2.5 rounded-full"
