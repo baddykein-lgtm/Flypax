@@ -23,9 +23,8 @@ export default function LandingPage() {
   return (
     <main>
       <nav className="max-w-6xl mx-auto flex items-center justify-between px-6 py-6">
-        <div className="flex items-center gap-2 font-display text-lg font-bold">
-          <span className="w-7 h-7 rounded-lg bg-mustard flex items-center justify-center text-ink text-sm">🚪</span>
-          Flypax
+        <div className="flex items-center">
+          <img src="/logo.png" alt="Flypax" className="h-8 w-auto" />
         </div>
         <div className="flex items-center gap-4">
           {geo && (
