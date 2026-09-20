@@ -31,6 +31,10 @@ create table businesses (
   profile      jsonb default '{}'::jsonb,    -- respuestas del onboarding: {tables: 12, takeaway: true, ...}
   country      text default 'España',
   currency     text default 'EUR',
+  whatsapp     text,                         -- solo dígitos con prefijo de país, ej. "34600000000" (se usa en wa.me/<numero>)
+  instagram    text,                         -- URL completa del perfil
+  facebook     text,                         -- URL completa de la página
+  website      text,                         -- URL completa del sitio propio
   created_at   timestamptz default now()
 );
 create index businesses_owner_idx on businesses(owner_id);
@@ -47,6 +51,8 @@ create table products (
   price        numeric(10,2) not null default 0,
   emoji        text default '⭐',
   description  text,
+  image_url    text,
+  tags         text[] default '{}',
   created_at   timestamptz default now()
 );
 create index products_business_idx on products(business_id);
@@ -106,15 +112,22 @@ create index invoices_business_idx on invoices(business_id);
 -- ------------------------------------------------------------
 -- SUBSCRIPTIONS — estado del plan de 19,99€/mes (lo escribe el webhook de Stripe)
 -- ------------------------------------------------------------
+-- El pago con Stripe pasa por /suscribirse ANTES de que exista el negocio
+-- (el negocio se crea después, en /onboarding). Por eso business_id empieza
+-- en null: el webhook guarda la fila con el email del pagador, y en cuanto
+-- se crea el negocio, /api/subscriptions/link la enlaza por ese email.
 create table subscriptions (
   id                    uuid primary key default gen_random_uuid(),
-  business_id           uuid not null unique references businesses(id) on delete cascade,
-  stripe_customer_id    text,
+  business_id           uuid references businesses(id) on delete cascade,
+  customer_email        text,
+  stripe_customer_id    text unique,
   stripe_subscription_id text,
   status                text default 'incomplete',  -- refleja el status de Stripe: active, past_due, canceled...
   current_period_end    timestamptz,
   created_at            timestamptz default now()
 );
+create unique index subscriptions_business_idx on subscriptions(business_id) where business_id is not null;
+create index subscriptions_email_idx on subscriptions(customer_email);
 
 -- ============================================================
 -- ROW LEVEL SECURITY
@@ -180,3 +193,42 @@ create policy "Owners manage invoices" on invoices
 create policy "Owners view their subscription" on subscriptions
   for select
   using (exists (select 1 from businesses b where b.id = subscriptions.business_id and b.owner_id = auth.uid()));
+
+-- ============================================================
+-- STORAGE — fotos de productos (carta)
+-- Bucket público de lectura (las fotos se muestran en la página pública
+-- sin login) pero solo el dueño del negocio puede subir/borrar dentro de
+-- su propia carpeta (products/<business_id>/...).
+-- ============================================================
+
+insert into storage.buckets (id, name, public)
+values ('products', 'products', true)
+on conflict (id) do nothing;
+
+alter table storage.objects enable row level security;
+
+create policy "Public can view product images" on storage.objects
+  for select
+  using (bucket_id = 'products');
+
+create policy "Owners upload product images" on storage.objects
+  for insert
+  with check (
+    bucket_id = 'products'
+    and exists (
+      select 1 from businesses b
+      where b.id::text = (storage.foldername(name))[1]
+      and b.owner_id = auth.uid()
+    )
+  );
+
+create policy "Owners delete product images" on storage.objects
+  for delete
+  using (
+    bucket_id = 'products'
+    and exists (
+      select 1 from businesses b
+      where b.id::text = (storage.foldername(name))[1]
+      and b.owner_id = auth.uid()
+    )
+  );

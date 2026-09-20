@@ -18,38 +18,52 @@ const NAV = [
   { href: "/panel/ajustes", label: "Ajustes", icon: "⚙️" },
 ];
 
+const ACTIVE_STATUSES = ["active", "trialing"];
+
 export default function PanelLayout({ children }) {
   const router = useRouter();
   const pathname = usePathname();
   const [business, setBusiness] = useState(null);
+  const [subStatus, setSubStatus] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [reactivating, setReactivating] = useState(false);
+  const [reactivateError, setReactivateError] = useState("");
+
+  async function load() {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session) {
+      router.push("/login");
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("businesses")
+      .select("*")
+      .eq("owner_id", session.user.id)
+      .maybeSingle();
+
+    if (error || !data) {
+      router.push("/onboarding");
+      return;
+    }
+
+    const { data: sub } = await supabase
+      .from("subscriptions")
+      .select("status")
+      .eq("business_id", data.id)
+      .maybeSingle();
+
+    setBusiness(data);
+    setSubStatus(sub?.status || null);
+    setLoading(false);
+  }
 
   useEffect(() => {
-    async function load() {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session) {
-        router.push("/login");
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from("businesses")
-        .select("*")
-        .eq("owner_id", session.user.id)
-        .maybeSingle();
-
-      if (error || !data) {
-        router.push("/onboarding");
-        return;
-      }
-
-      setBusiness(data);
-      setLoading(false);
-    }
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
   async function handleLogout() {
@@ -57,10 +71,79 @@ export default function PanelLayout({ children }) {
     router.push("/login");
   }
 
+  async function handleReactivate() {
+    setReactivating(true);
+    setReactivateError("");
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: session.user.email,
+          businessId: business.id,
+          token: session.access_token,
+        }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setReactivateError(data.error || "No se pudo iniciar el pago. Inténtalo de nuevo.");
+        setReactivating(false);
+      }
+    } catch (e) {
+      setReactivateError("Error de conexión con el servidor");
+      setReactivating(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-ink text-white/50 text-sm">
         Cargando tu panel…
+      </div>
+    );
+  }
+
+  if (!ACTIVE_STATUSES.includes(subStatus)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-ink text-white px-6">
+        <div className="w-full max-w-sm bg-[#1E332B] border border-white/10 rounded-2xl p-8 text-center">
+          <div className="flex justify-center mb-6">
+            <img src="/logo.png" alt="Flypax" className="h-7 w-auto" />
+          </div>
+          <h1 className="font-display text-xl mb-2">Tu suscripción no está activa</h1>
+          <p className="text-white/55 text-sm mb-6">
+            {subStatus
+              ? "Tu plan de 19,99€/mes está marcado como " + subStatus + ". Reactívalo para volver a acceder a tu panel."
+              : "Aún no vemos un pago confirmado para este negocio. Si acabas de pagar, puede tardar unos segundos — o reactívalo aquí."}
+          </p>
+          {reactivateError && <p className="text-red-400 text-xs mb-4">{reactivateError}</p>}
+          <button
+            onClick={handleReactivate}
+            disabled={reactivating}
+            className="w-full bg-mustard text-ink font-semibold py-3 rounded-full text-sm disabled:opacity-60 mb-3"
+          >
+            {reactivating ? "Conectando con Stripe…" : "Reactivar suscripción"}
+          </button>
+          <button
+            onClick={() => {
+              setLoading(true);
+              load();
+            }}
+            className="text-white/40 text-xs"
+          >
+            Ya pagué, volver a comprobar
+          </button>
+          <div>
+            <button onClick={handleLogout} className="text-white/40 text-xs mt-4">
+              Cerrar sesión
+            </button>
+          </div>
+        </div>
       </div>
     );
   }

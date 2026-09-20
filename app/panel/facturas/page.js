@@ -11,6 +11,7 @@ export default function FacturasPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [sendingId, setSendingId] = useState(null);
+  const [payingId, setPayingId] = useState(null);
 
   const [clientName, setClientName] = useState("");
   const [clientEmail, setClientEmail] = useState("");
@@ -72,7 +73,7 @@ export default function FacturasPage() {
       })
       .filter(Boolean);
 
-    await supabase.from("invoices").insert({
+    const { error } = await supabase.from("invoices").insert({
       business_id: business.id,
       client_name: clientName.trim(),
       client_email: clientEmail.trim() || null,
@@ -88,12 +89,22 @@ export default function FacturasPage() {
     });
 
     setSaving(false);
+    if (error) {
+      alert("No se pudo crear la factura: " + error.message);
+      return;
+    }
     resetForm();
     loadAll();
   }
 
   async function markPaid(id) {
-    await supabase.from("invoices").update({ paid: true }).eq("id", id);
+    setPayingId(id);
+    const { error } = await supabase.from("invoices").update({ paid: true }).eq("id", id);
+    setPayingId(null);
+    if (error) {
+      alert("No se pudo marcar como cobrada: " + error.message);
+      return;
+    }
     loadAll();
   }
 
@@ -103,18 +114,26 @@ export default function FacturasPage() {
       return;
     }
     setSendingId(invoice.id);
-    const res = await fetch("/api/invoices/send", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ invoiceId: invoice.id }),
-    });
-    const data = await res.json();
-    setSendingId(null);
-    if (!res.ok) {
-      alert(data.error || "No se pudo enviar la factura");
-      return;
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const res = await fetch("/api/invoices/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ invoiceId: invoice.id, token: session?.access_token }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "No se pudo enviar la factura");
+        return;
+      }
+      loadAll();
+    } catch (e) {
+      alert("Error de conexión al enviar la factura");
+    } finally {
+      setSendingId(null);
     }
-    loadAll();
   }
 
   if (loading) return <p className="text-sm text-[#5b6b60]">Cargando…</p>;
@@ -264,9 +283,10 @@ export default function FacturasPage() {
                 ) : (
                   <button
                     onClick={() => markPaid(i.id)}
-                    className="text-xs font-semibold border border-black/15 rounded-full px-3 py-1.5"
+                    disabled={payingId === i.id}
+                    className="text-xs font-semibold border border-black/15 rounded-full px-3 py-1.5 disabled:opacity-50"
                   >
-                    Marcar cobrada
+                    {payingId === i.id ? "Guardando…" : "Marcar cobrada"}
                   </button>
                 )}
                 <button

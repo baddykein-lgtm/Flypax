@@ -14,6 +14,7 @@ export default function PedidosPage() {
   const { business } = useBusiness();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [advancingId, setAdvancingId] = useState(null);
 
   async function loadOrders() {
     const { data } = await supabase
@@ -32,7 +33,13 @@ export default function PedidosPage() {
   }, [business.id]);
 
   async function advance(id, next) {
-    await supabase.from("orders").update({ status: next }).eq("id", id);
+    setAdvancingId(id);
+    const { error } = await supabase.from("orders").update({ status: next }).eq("id", id);
+    setAdvancingId(null);
+    if (error) {
+      alert("No se pudo actualizar el pedido: " + error.message);
+      return;
+    }
     loadOrders();
   }
 
@@ -87,9 +94,10 @@ export default function PedidosPage() {
                     </div>
                     <button
                       onClick={() => advance(o.id, col.next)}
-                      className="w-full bg-mustard text-ink font-semibold py-1.5 rounded-full text-xs"
+                      disabled={advancingId === o.id}
+                      className="w-full bg-mustard text-ink font-semibold py-1.5 rounded-full text-xs disabled:opacity-60"
                     >
-                      {col.action}
+                      {advancingId === o.id ? "..." : col.action}
                     </button>
                   </div>
                 ))

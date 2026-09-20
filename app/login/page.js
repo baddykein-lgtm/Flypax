@@ -22,15 +22,21 @@ export default function LoginPage() {
     }
 
     const token = data.session.access_token;
-    const res = await fetch("/api/admin/verify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token }),
-    });
-    const { isAdmin } = await res.json();
-
-    setLoading(false);
-    router.push(isAdmin ? "/admin" : "/panel");
+    try {
+      const res = await fetch("/api/admin/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token }),
+      });
+      const { isAdmin } = await res.json();
+      router.push(isAdmin ? "/admin" : "/panel");
+    } catch (e) {
+      // Si falla la comprobación de admin no bloqueamos el login: se manda
+      // al panel normal (que a su vez exige sesión y suscripción activa).
+      router.push("/panel");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (

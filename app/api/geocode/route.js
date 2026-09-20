@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 
 export async function POST(request) {
-  const { city } = await request.json();
-  if (!city || !city.trim()) {
-    return NextResponse.json({ error: "Falta la ciudad" }, { status: 400 });
+  const { city, address } = await request.json();
+  const query = (address && address.trim()) || city;
+  if (!query || !query.trim()) {
+    return NextResponse.json({ error: "Falta la ciudad o direccion" }, { status: 400 });
   }
 
-  const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city)}&format=json&limit=1`;
+  const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`;
 
   try {
     const res = await fetch(url, {
@@ -15,7 +16,7 @@ export async function POST(request) {
     const data = await res.json();
 
     if (!data || data.length === 0) {
-      return NextResponse.json({ error: "Ciudad no encontrada" }, { status: 404 });
+      return NextResponse.json({ error: "Ubicacion no encontrada" }, { status: 404 });
     }
 
     return NextResponse.json({

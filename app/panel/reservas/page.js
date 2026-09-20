@@ -28,6 +28,7 @@ export default function ReservasPage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [cancelingId, setCancelingId] = useState(null);
 
   const [clientName, setClientName] = useState("");
   const [phone, setPhone] = useState("");
@@ -85,15 +86,25 @@ export default function ReservasPage() {
         .join(" · ");
     }
 
-    await supabase.from("reservations").insert(record);
+    const { error } = await supabase.from("reservations").insert(record);
     setSaving(false);
+    if (error) {
+      alert("No se pudo guardar la reserva: " + error.message);
+      return;
+    }
     setShowModal(false);
     resetForm();
     loadReservations();
   }
 
   async function cancelReservation(id) {
-    await supabase.from("reservations").update({ status: "cancelada" }).eq("id", id);
+    setCancelingId(id);
+    const { error } = await supabase.from("reservations").update({ status: "cancelada" }).eq("id", id);
+    setCancelingId(null);
+    if (error) {
+      alert("No se pudo cancelar la reserva: " + error.message);
+      return;
+    }
     loadReservations();
   }
 
@@ -138,9 +149,10 @@ export default function ReservasPage() {
                   {r.status !== "cancelada" && (
                     <button
                       onClick={() => cancelReservation(r.id)}
-                      className="text-xs font-semibold text-[#5b6b60]"
+                      disabled={cancelingId === r.id}
+                      className="text-xs font-semibold text-[#5b6b60] disabled:opacity-50"
                     >
-                      Cancelar
+                      {cancelingId === r.id ? "..." : "Cancelar"}
                     </button>
                   )}
                 </div>

@@ -27,7 +27,15 @@ export default function MapView({ businesses }) {
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
       />
       {businesses.map((b) => (
-        <Marker key={b.id} position={[b.latitude, b.longitude]}>
+        <Marker
+          key={b.id}
+          position={[b.latitude, b.longitude]}
+          eventHandlers={{
+            click: () => {
+              window.location.href = "/" + b.slug;
+            },
+          }}
+        >
           <Popup>
             <b>{b.name}</b>
             <br />

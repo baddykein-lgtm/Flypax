@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { CATEGORIES, CATEGORY_CONFIG } from "@/lib/categoryConfig";
 
-const DIAS_FULL = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+const DIAS_FULL = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado", "Domingo"];
 const ICONS = ["💈", "🍽️", "🩺", "🔧", "🛍️", "☕", "💅", "🐾", "🧁", "🏋️"];
 
 function slugify(s) {
@@ -31,6 +31,7 @@ export default function OnboardingPage() {
   const [slug, setSlug] = useState("");
   const [slugTouched, setSlugTouched] = useState(false);
   const [city, setCity] = useState("");
+  const [locationAddress, setLocationAddress] = useState("");
   const [days, setDays] = useState([true, true, true, true, true, true, false]);
   const [answers, setAnswers] = useState({});
   const [email, setEmail] = useState("");
@@ -89,7 +90,7 @@ export default function OnboardingPage() {
 
     const userId = authData.user?.id;
     if (!userId) {
-      setError("Cuenta creada. Revisa tu email para confirmarla y luego inicia sesión.");
+      setError("Cuenta creada. Revisa tu email para confirmarla y luego inicia sesion.");
       setLoading(false);
       return;
     }
@@ -100,7 +101,7 @@ export default function OnboardingPage() {
       const geoRes = await fetch("/api/geocode", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ city }),
+        body: JSON.stringify({ city, address: locationAddress }),
       });
       if (geoRes.ok) {
         const geoData = await geoRes.json();
@@ -111,7 +112,7 @@ export default function OnboardingPage() {
 
     const hours = {};
     DIAS_FULL.forEach((_, i) => {
-      hours[i] = days[i] ? (categoryId === "restaurante" ? "13:00–16:30" : "9:30–20:00") : null;
+      hours[i] = days[i] ? (categoryId === "restaurante" ? "13:00-16:30" : "9:30-20:00") : null;
     });
 
     const { error: insertError } = await supabase.from("businesses").insert({
@@ -121,6 +122,7 @@ export default function OnboardingPage() {
       icon,
       slug: effectiveSlug,
       city,
+      location_address: locationAddress || null,
       latitude,
       longitude,
       hours,
@@ -154,15 +156,15 @@ export default function OnboardingPage() {
 
         {step === 1 && (
           <div>
-            <h2 className="font-display text-xl mb-5">¿Cómo se llama tu negocio?</h2>
+            <h2 className="font-display text-xl mb-5">¿Como se llama tu negocio?</h2>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Ej. Peluquería Aurora"
+              placeholder="Ej. Peluqueria Aurora"
               className="w-full bg-[#16231D] border border-white/15 rounded-lg px-3 py-2.5 text-sm mb-5 outline-none focus:border-mustard"
             />
-            <label className="block text-xs font-semibold text-white/60 mb-2">Categoría</label>
+            <label className="block text-xs font-semibold text-white/60 mb-2">Categoria</label>
             <div className="flex flex-col gap-2 mb-5">
               {CATEGORIES.map((c) => (
                 <button
@@ -197,7 +199,7 @@ export default function OnboardingPage() {
 
         {step === 2 && (
           <div>
-            <h2 className="font-display text-xl mb-5">Así verán tu negocio tus clientes</h2>
+            <h2 className="font-display text-xl mb-5">Asi veran tu negocio tus clientes</h2>
             <div className="bg-[#284137] rounded-lg px-3.5 py-2.5 text-sm mb-4">
               flypax.online/<b className="text-mustard">{effectiveSlug}</b>
             </div>
@@ -217,18 +219,26 @@ export default function OnboardingPage() {
               type="text"
               value={city}
               onChange={(e) => setCity(e.target.value)}
-              placeholder="Ej. Alcalá de Henares"
+              placeholder="Ej. Alcala de Henares"
+              className="w-full bg-[#16231D] border border-white/15 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-mustard mb-4"
+            />
+            <label className="block text-xs font-semibold text-white/60 mb-2">Direccion exacta (opcional)</label>
+            <input
+              type="text"
+              value={locationAddress}
+              onChange={(e) => setLocationAddress(e.target.value)}
+              placeholder="Ej. Calle Mayor 12"
               className="w-full bg-[#16231D] border border-white/15 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-mustard"
             />
             <p className="text-xs text-white/40 mt-2">
-              Así aparecerás en el directorio de negocios cercanos a tus clientes.
+              Con la direccion exacta, tu chincheta en el mapa apunta a tu puerta, no solo a la ciudad.
             </p>
           </div>
         )}
 
         {step === 3 && (
           <div>
-            <h2 className="font-display text-xl mb-5">¿Cuándo estáis abiertos?</h2>
+            <h2 className="font-display text-xl mb-5">¿Cuando estais abiertos?</h2>
             <div className="flex flex-col gap-2">
               {DIAS_FULL.map((d, i) => (
                 <div key={d} className="flex items-center gap-3 text-sm">
@@ -242,7 +252,7 @@ export default function OnboardingPage() {
                   </button>
                   <span className="flex-1">{d}</span>
                   <span className="text-white/50">
-                    {days[i] ? (categoryId === "restaurante" ? "13:00–16:30" : "9:30–20:00") : "Cerrado"}
+                    {days[i] ? (categoryId === "restaurante" ? "13:00-16:30" : "9:30-20:00") : "Cerrado"}
                   </span>
                 </div>
               ))}
@@ -252,19 +262,19 @@ export default function OnboardingPage() {
 
         {step === 4 && (
           <div>
-            <h2 className="font-display text-xl mb-5">Últimos detalles</h2>
+            <h2 className="font-display text-xl mb-5">Ultimos detalles</h2>
             <div className="flex flex-col gap-4 mb-6">
               {cfg.onboardQ.map((q) => (
                 <div key={q.key}>
                   <label className="block text-xs font-semibold text-white/60 mb-1.5">{q.label}</label>
                   {q.type === "bool" ? (
                     <div className="flex gap-2">
-                      {["Sí", "No"].map((opt) => (
+                      {["Si", "No"].map((opt) => (
                         <button
                           key={opt}
-                          onClick={() => setAnswer(q.key, opt === "Sí")}
+                          onClick={() => setAnswer(q.key, opt === "Si")}
                           className={`flex-1 py-2 rounded-lg border text-sm font-medium ${
-                            answers[q.key] === (opt === "Sí")
+                            answers[q.key] === (opt === "Si")
                               ? "border-mustard bg-mustard/10"
                               : "border-white/15"
                           }`}
@@ -280,7 +290,7 @@ export default function OnboardingPage() {
                       className="w-full bg-[#16231D] border border-white/15 rounded-lg px-3 py-2.5 text-sm"
                     >
                       <option value="" disabled>
-                        Elige una opción
+                        Elige una opcion
                       </option>
                       {q.options.map((o) => (
                         <option key={o} value={o}>
@@ -314,7 +324,7 @@ export default function OnboardingPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Contraseña (mín. 6 caracteres)"
+                placeholder="Contraseña (min. 6 caracteres)"
                 className="w-full bg-[#16231D] border border-white/15 rounded-lg px-3 py-2.5 text-sm"
               />
             </div>
@@ -326,7 +336,7 @@ export default function OnboardingPage() {
         <div className="flex justify-between items-center mt-7">
           {step > 1 ? (
             <button onClick={back} className="text-white/60 text-sm font-semibold">
-              Atrás
+              Atras
             </button>
           ) : (
             <span />
@@ -341,7 +351,7 @@ export default function OnboardingPage() {
               disabled={loading}
               className="bg-mustard text-ink font-semibold px-6 py-2.5 rounded-full text-sm disabled:opacity-60"
             >
-              {loading ? "Creando…" : "Crear mi panel →"}
+              {loading ? "Creando..." : "Crear mi panel →"}
             </button>
           )}
         </div>

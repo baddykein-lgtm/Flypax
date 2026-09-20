@@ -24,7 +24,7 @@ export default function SuscribirsePage() {
       if (data.url) {
         window.location.href = data.url;
       } else {
-        setError("No se pudo iniciar el pago. Revisa las claves de Stripe en .env.local");
+        setError(data.error || "No se pudo iniciar el pago. Inténtalo de nuevo en unos minutos.");
       }
     } catch (e) {
       setError("Error de conexión con el servidor");

@@ -9,6 +9,7 @@ export default function AdminPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [denied, setDenied] = useState(false);
+  const [loadError, setLoadError] = useState("");
   const [data, setData] = useState(null);
 
   useEffect(() => {
@@ -20,18 +21,28 @@ export default function AdminPage() {
         router.push("/login");
         return;
       }
-      const res = await fetch("/api/admin/summary", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      if (!res.ok) {
-        setDenied(true);
+      try {
+        const res = await fetch("/api/admin/summary", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        if (res.status === 401 || res.status === 403) {
+          setDenied(true);
+          setLoading(false);
+          return;
+        }
+        if (!res.ok) {
+          setLoadError("No se pudo cargar el panel de administración. Inténtalo de nuevo.");
+          setLoading(false);
+          return;
+        }
+        const json = await res.json();
+        setData(json);
         setLoading(false);
-        return;
+      } catch (e) {
+        setLoadError("Error de conexión con el servidor.");
+        setLoading(false);
       }
-      const json = await res.json();
-      setData(json);
-      setLoading(false);
     }
     load();
   }, [router]);
@@ -46,6 +57,12 @@ export default function AdminPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-ink text-white text-sm">
         No tienes acceso de administrador.
+      </div>
+    );
+  if (loadError)
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-ink text-white text-sm">
+        {loadError}
       </div>
     );
 
