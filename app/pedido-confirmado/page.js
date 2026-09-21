@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
-export default function PedidoConfirmadoPage() {
+function ConfirmacionContent() {
   const params = useSearchParams();
   const orderId = params.get("orderId");
   const sessionId = params.get("session_id");
@@ -31,24 +31,32 @@ export default function PedidoConfirmadoPage() {
   }, [orderId, sessionId]);
 
   return (
+    <div className="bg-[#1E332B] border border-white/10 rounded-2xl p-8 text-center max-w-sm w-full">
+      {status === "checking" && <p className="text-white/60 text-sm">Confirmando tu pago...</p>}
+      {status === "paid" && (
+        <>
+          <p className="font-display text-2xl mb-2">Pago confirmado</p>
+          <p className="text-sm text-white/60">Tu pedido ha llegado a cocina. Gracias.</p>
+        </>
+      )}
+      {status === "error" && (
+        <>
+          <p className="font-display text-xl mb-2">No pudimos confirmar el pago</p>
+          <p className="text-sm text-white/60">
+            Si el cargo se hizo en tu tarjeta, contacta con el negocio para confirmar tu pedido.
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
+export default function PedidoConfirmadoPage() {
+  return (
     <main className="min-h-screen bg-ink text-white flex items-center justify-center px-6">
-      <div className="bg-[#1E332B] border border-white/10 rounded-2xl p-8 text-center max-w-sm w-full">
-        {status === "checking" && <p className="text-white/60 text-sm">Confirmando tu pago...</p>}
-        {status === "paid" && (
-          <>
-            <p className="font-display text-2xl mb-2">Pago confirmado</p>
-            <p className="text-sm text-white/60">Tu pedido ha llegado a cocina. Gracias.</p>
-          </>
-        )}
-        {status === "error" && (
-          <>
-            <p className="font-display text-xl mb-2">No pudimos confirmar el pago</p>
-            <p className="text-sm text-white/60">
-              Si el cargo se hizo en tu tarjeta, contacta con el negocio para confirmar tu pedido.
-            </p>
-          </>
-        )}
-      </div>
+      <Suspense fallback={<p className="text-white/60 text-sm">Cargando...</p>}>
+        <ConfirmacionContent />
+      </Suspense>
     </main>
   );
 }
