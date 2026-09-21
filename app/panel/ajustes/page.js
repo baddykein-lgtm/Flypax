@@ -26,6 +26,25 @@ export default function AjustesPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [statusMsg, setStatusMsg] = useState("");
+  const [connecting, setConnecting] = useState(false);
+
+  async function handleConnectStripe() {
+    setConnecting(true);
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const res = await fetch("/api/stripe/connect/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: session.access_token, businessId: business.id }),
+    });
+    const data = await res.json();
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      setConnecting(false);
+    }
+  }
 
   function toggleDayOpen(i) {
     setHours((h) => ({ ...h, [i]: h[i] ? "" : "9:30-20:00" }));
@@ -110,6 +129,29 @@ export default function AjustesPage() {
       <div className="mb-7">
         <h1 className="font-display text-2xl">Ajustes</h1>
         <p className="text-sm text-[#5b6b60] mt-1">Datos de tu negocio, horario y como te encuentran tus clientes.</p>
+      </div>
+
+      <div className="bg-white border border-black/10 rounded-xl p-5 mb-5">
+        <h3 className="font-semibold text-sm mb-4">Cobros a clientes</h3>
+        {business.stripe_connect_status === "connected" ? (
+          <p className="text-sm text-green-700 font-semibold">
+            ✓ Tu cuenta de Stripe esta conectada. Los pagos de tus clientes van directos a tu banco.
+          </p>
+        ) : (
+          <>
+            <p className="text-sm text-[#5b6b60] mb-3">
+              Conecta tu cuenta de Stripe para poder cobrar los pedidos en mesa directamente a tu banco -
+              Flypax nunca toca ese dinero.
+            </p>
+            <button
+              onClick={handleConnectStripe}
+              disabled={connecting}
+              className="bg-mustard text-ink font-semibold px-5 py-2.5 rounded-full text-sm disabled:opacity-60"
+            >
+              {connecting ? "Conectando..." : "Conectar con Stripe"}
+            </button>
+          </>
+        )}
       </div>
 
       <div className="bg-white border border-black/10 rounded-xl p-5 mb-5">
