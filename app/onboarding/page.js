@@ -115,27 +115,47 @@ export default function OnboardingPage() {
       hours[i] = days[i] ? (categoryId === "restaurante" ? "13:00-16:30" : "9:30-20:00") : null;
     });
 
-    const { error: insertError } = await supabase.from("businesses").insert({
-      owner_id: userId,
-      name,
-      category_id: categoryId,
-      icon,
-      slug: effectiveSlug,
-      city,
-      location_address: locationAddress || null,
-      latitude,
-      longitude,
-      hours,
-      profile: answers,
-    });
-
-    setLoading(false);
+    const { data: newBusiness, error: insertError } = await supabase
+      .from("businesses")
+      .insert({
+        owner_id: userId,
+        name,
+        category_id: categoryId,
+        icon,
+        slug: effectiveSlug,
+        city,
+        location_address: locationAddress || null,
+        latitude,
+        longitude,
+        hours,
+        profile: answers,
+      })
+      .select()
+      .single();
 
     if (insertError) {
+      setLoading(false);
       setError(insertError.message);
       return;
     }
 
+    // Enlazamos el negocio recien creado con la suscripcion que Stripe
+    // haya podido dejar ya activa para este email (si el cliente vino de
+    // /suscribirse y pago antes de llegar aqui).
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session) {
+        await fetch("/api/subscriptions/link", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: session.access_token, businessId: newBusiness.id }),
+        });
+      }
+    } catch (e) {}
+
+    setLoading(false);
     router.push("/panel");
   }
 
