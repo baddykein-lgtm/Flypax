@@ -27,6 +27,10 @@ export default function AjustesPage() {
   const [saved, setSaved] = useState(false);
   const [statusMsg, setStatusMsg] = useState("");
   const [connecting, setConnecting] = useState(false);
+  const [canceling, setCanceling] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [dangerMsg, setDangerMsg] = useState("");
 
   async function handleConnectStripe() {
     setConnecting(true);
@@ -43,6 +47,51 @@ export default function AjustesPage() {
       window.location.href = data.url;
     } else {
       setConnecting(false);
+    }
+  }
+
+  async function handleCancelSubscription() {
+    if (!confirm("¿Seguro que quieres cancelar tu suscripcion? Seguiras teniendo acceso hasta el final del periodo ya pagado.")) return;
+    setCanceling(true);
+    setDangerMsg("");
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const res = await fetch("/api/stripe/cancel", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: session.access_token, businessId: business.id }),
+    });
+    const data = await res.json();
+    setCanceling(false);
+    if (data.ok) {
+      setDangerMsg("Suscripcion cancelada. Tendras acceso hasta el final del periodo ya pagado.");
+    } else {
+      setDangerMsg(data.error || "No se pudo cancelar");
+    }
+  }
+
+  async function handleDeleteBusiness() {
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      return;
+    }
+    setDeleting(true);
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const res = await fetch("/api/business/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: session.access_token, businessId: business.id }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      await supabase.auth.signOut();
+      window.location.href = "/";
+    } else {
+      setDeleting(false);
+      setDangerMsg(data.error || "No se pudo borrar el negocio");
     }
   }
 
@@ -304,6 +353,32 @@ export default function AjustesPage() {
           placeholder="Opcional"
           className="w-full border border-black/15 rounded-lg px-3 py-2 text-sm"
         />
+      </div>
+
+      <div className="bg-white border border-red-200 rounded-xl p-5 mb-5">
+        <h3 className="font-semibold text-sm mb-4 text-red-700">Zona peligrosa</h3>
+
+        {dangerMsg && <p className="text-sm text-[#5b6b60] mb-3">{dangerMsg}</p>}
+
+        <button
+          onClick={handleCancelSubscription}
+          disabled={canceling}
+          className="text-sm font-semibold text-red-700 border border-red-200 rounded-full px-4 py-2 mb-3 disabled:opacity-60 block"
+        >
+          {canceling ? "Cancelando..." : "Cancelar suscripcion"}
+        </button>
+
+        <button
+          onClick={handleDeleteBusiness}
+          disabled={deleting}
+          className="text-sm font-semibold text-white bg-red-700 rounded-full px-4 py-2 disabled:opacity-60 block"
+        >
+          {deleting
+            ? "Borrando..."
+            : confirmDelete
+            ? "¿Seguro? Pulsa otra vez para confirmar"
+            : "Borrar negocio permanentemente"}
+        </button>
       </div>
 
       <div className="flex items-center gap-3">

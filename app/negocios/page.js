@@ -94,6 +94,14 @@ export default function NegociosLandingPage() {
       </section>
 
       <footer className="text-center py-10 text-white/40 text-sm">
+        <div className="flex justify-center gap-4 mb-3">
+          <Link href="/ayuda" className="hover:text-white">
+            Ayuda
+          </Link>
+          <Link href="/privacidad" className="hover:text-white">
+            Privacidad
+          </Link>
+        </div>
         Flypax — la puerta digital de los negocios de tu barrio
       </footer>
     </main>
