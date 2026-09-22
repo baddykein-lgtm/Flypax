@@ -115,12 +115,16 @@ export default function HomePage() {
                 href={"/" + b.slug}
                 className="bg-[#1E332B] border border-white/10 rounded-xl overflow-hidden hover:border-mustard/50 transition"
               >
-                <div
-                  className="h-16 flex items-center justify-center text-2xl"
-                  style={{ background: CAT_COLOR[b.category_id] || CAT_COLOR.otro }}
-                >
-                  {b.icon}
-                </div>
+                {b.image_url ? (
+                  <img src={b.image_url} alt={b.name} className="h-16 w-full object-cover" />
+                ) : (
+                  <div
+                    className="h-16 flex items-center justify-center text-2xl"
+                    style={{ background: CAT_COLOR[b.category_id] || CAT_COLOR.otro }}
+                  >
+                    {b.icon}
+                  </div>
+                )}
                 <div className="p-3">
                   <div className="font-semibold text-sm truncate">{b.name}</div>
                   <div className="text-xs text-white/50 mt-0.5">

@@ -61,6 +61,10 @@ export default function AjustesPage() {
     setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
   }
+  function handleRemoveImage() {
+    setImageFile("REMOVE");
+    setImagePreview(null);
+  }
 
   async function handleSave() {
     setSaving(true);
@@ -68,7 +72,9 @@ export default function AjustesPage() {
     setStatusMsg("");
 
     let image_url = business.image_url || null;
-    if (imageFile) {
+    if (imageFile === "REMOVE") {
+      image_url = null;
+    } else if (imageFile) {
       setStatusMsg("Subiendo foto...");
       const ext = imageFile.name.split(".").pop();
       const path = business.id + "/cover-" + Date.now() + "." + ext;
@@ -157,7 +163,16 @@ export default function AjustesPage() {
       <div className="bg-white border border-black/10 rounded-xl p-5 mb-5">
         <h3 className="font-semibold text-sm mb-4">Foto de tu negocio</h3>
         {imagePreview && (
-          <img src={imagePreview} alt="preview" className="w-full h-40 object-cover rounded-lg mb-3" />
+          <div className="mb-3">
+            <img src={imagePreview} alt="preview" className="w-full h-40 object-cover rounded-lg mb-2" />
+            <button
+              onClick={handleRemoveImage}
+              type="button"
+              className="text-xs font-semibold text-red-700 border border-red-200 rounded-full px-3 py-1.5"
+            >
+              Quitar foto
+            </button>
+          </div>
         )}
         <input type="file" accept="image/*" onChange={handleFileChange} className="w-full text-sm" />
         <p className="text-xs text-[#8a958d] mt-1">Se muestra en tu pagina publica y en el directorio.</p>

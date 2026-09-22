@@ -4,18 +4,11 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// Crea una sesión de pago de Stripe para el plan de 19,99€/mes.
-// El frontend llama a esto y redirige al usuario a session.url.
-//
-// businessId solo se acepta si viene acompañado de un token de sesión válido
-// del dueño de ese negocio (caso: reactivar una suscripción cancelada desde
-// el panel). En el alta normal (desde /suscribirse) no hay negocio todavía,
-// así que se manda vacío y el webhook lo enlazará más tarde por email.
 export async function POST(request) {
   const { email, businessId, token } = await request.json();
 
   if (!email || !EMAIL_RE.test(email)) {
-    return NextResponse.json({ error: "Email inválido" }, { status: 400 });
+    return NextResponse.json({ error: "Email invalido" }, { status: 400 });
   }
 
   let verifiedBusinessId = "";
@@ -25,7 +18,7 @@ export async function POST(request) {
     }
     const { data: userData } = await supabaseAdmin.auth.getUser(token);
     if (!userData?.user) {
-      return NextResponse.json({ error: "Token inválido" }, { status: 401 });
+      return NextResponse.json({ error: "Token invalido" }, { status: 401 });
     }
     const { data: biz } = await supabaseAdmin
       .from("businesses")
@@ -46,8 +39,9 @@ export async function POST(request) {
       line_items: [{ price: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID, quantity: 1 }],
       success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/onboarding?checkout=success`,
       cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/suscribirse?checkout=cancel`,
-      // Guardamos el business_id para que el webhook sepa a qué negocio
-      // asociar la suscripción cuando llegue la confirmación de pago.
+      subscription_data: {
+        trial_period_days: 5,
+      },
       metadata: { businessId: verifiedBusinessId },
     });
     return NextResponse.json({ url: session.url });
