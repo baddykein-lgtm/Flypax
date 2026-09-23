@@ -44,6 +44,13 @@ export default function PublicBusinessPage({ params }) {
   const [payMethod, setPayMethod] = useState(null);
   const [orderError, setOrderError] = useState("");
 
+  const [reviews, setReviews] = useState([]);
+  const [reviewName, setReviewName] = useState("");
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [reviewSending, setReviewSending] = useState(false);
+  const [reviewSent, setReviewSent] = useState(false);
+
   useEffect(() => {
     async function load() {
       const { data: biz } = await supabase.from("businesses").select("*").eq("slug", slug).maybeSingle();
@@ -57,8 +64,14 @@ export default function PublicBusinessPage({ params }) {
         .select("*")
         .eq("business_id", biz.id)
         .order("created_at", { ascending: true });
+      const { data: revs } = await supabase
+        .from("reviews")
+        .select("*")
+        .eq("business_id", biz.id)
+        .order("created_at", { ascending: false });
       setBusiness(biz);
       setProducts(prods || []);
+      setReviews(revs || []);
       setLoading(false);
     }
     load();
@@ -81,6 +94,7 @@ export default function PublicBusinessPage({ params }) {
   const categoryLabel = CATEGORIES.find((c) => c.id === business.category_id)?.label || business.category_id;
   const tableCount = Math.min(Number(business.profile?.tables) || 8, 20);
   const canAcceptOnlinePayment = business.stripe_connect_status === "connected";
+  const avgRating = reviews.length > 0 ? reviews.reduce((a, r) => a + r.rating, 0) / reviews.length : null;
 
   const grouped = {};
   products.forEach((p) => {
@@ -197,6 +211,24 @@ export default function PublicBusinessPage({ params }) {
       setOrderError("Error de conexion");
       setSending(false);
     }
+  }
+
+  async function handleSendReview() {
+    if (!reviewName.trim()) return;
+    setReviewSending(true);
+    const { data: inserted } = await supabase
+      .from("reviews")
+      .insert({
+        business_id: business.id,
+        client_name: reviewName.trim(),
+        rating: reviewRating,
+        comment: reviewComment.trim() || null,
+      })
+      .select()
+      .single();
+    setReviewSending(false);
+    setReviewSent(true);
+    if (inserted) setReviews((r) => [inserted, ...r]);
   }  return (
     <main className="min-h-screen bg-ink text-white pb-16">
       <div className="max-w-xl mx-auto">
@@ -205,6 +237,11 @@ export default function PublicBusinessPage({ params }) {
           <h1 className="font-display text-3xl mb-2">
             {business.icon} {business.name}
           </h1>
+          {avgRating && (
+            <p className="text-sm text-mustard mb-1">
+              {"★".repeat(Math.round(avgRating))} {avgRating.toFixed(1)} ({reviews.length} reseñas)
+            </p>
+          )}
           {hoursLine && <p className="text-white/50 text-sm">{hoursLine}</p>}
         </div>
 
@@ -442,6 +479,67 @@ export default function PublicBusinessPage({ params }) {
           )}
         </div>
 
+        <div className="px-6 mt-10">
+          <h3 className="font-display text-lg mb-4">Reseñas</h3>
+
+          {reviewSent ? (
+            <div className="bg-[#1E332B] border border-white/10 rounded-2xl p-5 mb-5 text-center">
+              <p className="text-sm">Gracias por tu opinion.</p>
+            </div>
+          ) : (
+            <div className="bg-[#1E332B] border border-white/10 rounded-2xl p-5 mb-5">
+              <p className="text-sm font-semibold mb-3">Deja tu opinion</p>
+              <input
+                value={reviewName}
+                onChange={(e) => setReviewName(e.target.value)}
+                placeholder="Tu nombre"
+                className="w-full bg-[#16231D] border border-white/15 rounded-lg px-3 py-2.5 text-sm mb-3"
+              />
+              <div className="flex gap-1 mb-3">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button
+                    key={n}
+                    onClick={() => setReviewRating(n)}
+                    className={"text-2xl " + (n <= reviewRating ? "text-mustard" : "text-white/20")}
+                  >
+                    ★
+                  </button>
+                ))}
+              </div>
+              <textarea
+                value={reviewComment}
+                onChange={(e) => setReviewComment(e.target.value)}
+                placeholder="Comentario (opcional)"
+                rows={2}
+                className="w-full bg-[#16231D] border border-white/15 rounded-lg px-3 py-2.5 text-sm mb-3"
+              />
+              <button
+                onClick={handleSendReview}
+                disabled={reviewSending}
+                className="w-full bg-mustard text-ink font-semibold py-2.5 rounded-full text-sm disabled:opacity-60"
+              >
+                {reviewSending ? "Enviando..." : "Enviar reseña"}
+              </button>
+            </div>
+          )}
+
+          {reviews.length === 0 ? (
+            <p className="text-sm text-white/40">Este negocio todavia no tiene reseñas.</p>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {reviews.map((r) => (
+                <div key={r.id} className="bg-[#1E332B] border border-white/10 rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-semibold text-sm">{r.client_name}</span>
+                    <span className="text-mustard text-xs">{"★".repeat(r.rating)}</span>
+                  </div>
+                  {r.comment && <p className="text-sm text-white/60">{r.comment}</p>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         <Footer business={business} />
 
         <p className="text-center text-white/30 text-xs mt-8">
@@ -510,9 +608,7 @@ export default function PublicBusinessPage({ params }) {
       )}
     </main>
   );
-}
-
-function Tag({ children }) {
+}function Tag({ children }) {
   return <span className="text-[10px] font-semibold bg-white/10 text-white/60 px-2 py-0.5 rounded-full">{children}</span>;
 }
 

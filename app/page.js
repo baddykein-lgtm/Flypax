@@ -22,6 +22,7 @@ const CAT_COLOR = {
 
 export default function HomePage() {
   const [businesses, setBusinesses] = useState([]);
+  const [ratings, setRatings] = useState({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterCat, setFilterCat] = useState("todos");
@@ -32,6 +33,24 @@ export default function HomePage() {
       const { data } = await supabase.from("businesses").select("*").order("created_at", { ascending: false });
       setBusinesses(data || []);
       setLoading(false);
+
+      const { data: reviewRows } = await supabase.from("reviews").select("business_id, rating");
+      if (reviewRows) {
+        const grouped = {};
+        reviewRows.forEach((r) => {
+          if (!grouped[r.business_id]) grouped[r.business_id] = [];
+          grouped[r.business_id].push(r.rating);
+        });
+        const avgs = {};
+        Object.keys(grouped).forEach((id) => {
+          const list = grouped[id];
+          avgs[id] = {
+            avg: list.reduce((a, b) => a + b, 0) / list.length,
+            count: list.length,
+          };
+        });
+        setRatings(avgs);
+      }
     }
     load();
   }, []);
@@ -109,32 +128,55 @@ export default function HomePage() {
           </p>
         ) : (
           <div className="grid md:grid-cols-2 gap-4">
-            {filtered.map((b) => (
-              <Link
-                key={b.id}
-                href={"/" + b.slug}
-                className="bg-[#1E332B] border border-white/10 rounded-xl overflow-hidden hover:border-mustard/50 transition"
-              >
-                {b.image_url ? (
-                  <img src={b.image_url} alt={b.name} className="h-16 w-full object-cover" />
-                ) : (
-                  <div
-                    className="h-16 flex items-center justify-center text-2xl"
-                    style={{ background: CAT_COLOR[b.category_id] || CAT_COLOR.otro }}
-                  >
-                    {b.icon}
+            {filtered.map((b) => {
+              const r = ratings[b.id];
+              return (
+                <Link
+                  key={b.id}
+                  href={"/" + b.slug}
+                  className="bg-[#1E332B] border border-white/10 rounded-xl overflow-hidden hover:border-mustard/50 transition"
+                >
+                  {b.image_url ? (
+                    <img src={b.image_url} alt={b.name} className="h-16 w-full object-cover" />
+                  ) : (
+                    <div
+                      className="h-16 flex items-center justify-center text-2xl"
+                      style={{ background: CAT_COLOR[b.category_id] || CAT_COLOR.otro }}
+                    >
+                      {b.icon}
+                    </div>
+                  )}
+                  <div className="p-3">
+                    <div className="font-semibold text-sm truncate">{b.name}</div>
+                    <div className="text-xs text-white/50 mt-0.5">
+                      {categoryLabel(b.category_id)} {b.city ? "· " + b.city : ""}
+                    </div>
+                    {r && (
+                      <div className="flex items-center gap-1 mt-1.5 text-xs">
+                        <span className="text-mustard">{"★".repeat(Math.round(r.avg))}</span>
+                        <span className="text-white/40">
+                          {r.avg.toFixed(1)} ({r.count})
+                        </span>
+                      </div>
+                    )}
                   </div>
-                )}
-                <div className="p-3">
-                  <div className="font-semibold text-sm truncate">{b.name}</div>
-                  <div className="text-xs text-white/50 mt-0.5">
-                    {categoryLabel(b.category_id)} {b.city ? "· " + b.city : ""}
-                  </div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
           </div>
         )}
+
+        <footer className="text-center py-10 text-white/40 text-sm mt-6">
+          <div className="flex justify-center gap-4 mb-3">
+            <Link href="/ayuda" className="hover:text-white">
+              Ayuda
+            </Link>
+            <Link href="/privacidad" className="hover:text-white">
+              Privacidad
+            </Link>
+          </div>
+          Flypax — la puerta digital de los negocios de tu barrio
+        </footer>
       </div>
     </main>
   );
