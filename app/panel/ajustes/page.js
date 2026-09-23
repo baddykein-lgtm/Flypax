@@ -13,6 +13,11 @@ export default function AjustesPage() {
   const [locationAddress, setLocationAddress] = useState(business.location_address || "");
   const [taxId, setTaxId] = useState(business.tax_id || "");
   const [address, setAddress] = useState(business.address || "");
+  const [whatsapp, setWhatsapp] = useState(business.whatsapp || "");
+  const [instagram, setInstagram] = useState(business.instagram || "");
+  const [facebook, setFacebook] = useState(business.facebook || "");
+  const [website, setWebsite] = useState(business.website || "");
+  const [googleReviews, setGoogleReviews] = useState(business.google_reviews_url || "");
   const [hours, setHours] = useState(() => {
     const h = {};
     DIAS_FULL.forEach((_, i) => {
@@ -160,6 +165,11 @@ export default function AjustesPage() {
       location_address: locationAddress.trim() || null,
       tax_id: taxId.trim() || null,
       address: address.trim() || null,
+      whatsapp: whatsapp.trim() || null,
+      instagram: instagram.trim() || null,
+      facebook: facebook.trim() || null,
+      website: website.trim() || null,
+      google_reviews_url: googleReviews.trim() || null,
       hours,
       profile,
       latitude,
@@ -336,6 +346,53 @@ export default function AjustesPage() {
           ))}
         </div>
       )}
+
+      <div className="bg-white border border-black/10 rounded-xl p-5 mb-5">
+        <h3 className="font-semibold text-sm mb-4">Enlaces y redes</h3>
+
+        <label className="block text-xs font-semibold text-[#5b6b60] mb-1">Reseñas de Google</label>
+        <input
+          value={googleReviews}
+          onChange={(e) => setGoogleReviews(e.target.value)}
+          placeholder="https://g.page/r/tu-negocio/review"
+          className="w-full border border-black/15 rounded-lg px-3 py-2 text-sm mb-1"
+        />
+        <p className="text-xs text-[#8a958d] mb-3">
+          Lo sacas desde tu perfil de Google Business, en "Pide reseñas" - copia ese enlace corto.
+        </p>
+
+        <label className="block text-xs font-semibold text-[#5b6b60] mb-1">WhatsApp</label>
+        <input
+          value={whatsapp}
+          onChange={(e) => setWhatsapp(e.target.value)}
+          placeholder="34600000000"
+          className="w-full border border-black/15 rounded-lg px-3 py-2 text-sm mb-3"
+        />
+
+        <label className="block text-xs font-semibold text-[#5b6b60] mb-1">Instagram</label>
+        <input
+          value={instagram}
+          onChange={(e) => setInstagram(e.target.value)}
+          placeholder="https://instagram.com/tunegocio"
+          className="w-full border border-black/15 rounded-lg px-3 py-2 text-sm mb-3"
+        />
+
+        <label className="block text-xs font-semibold text-[#5b6b60] mb-1">Facebook</label>
+        <input
+          value={facebook}
+          onChange={(e) => setFacebook(e.target.value)}
+          placeholder="https://facebook.com/tunegocio"
+          className="w-full border border-black/15 rounded-lg px-3 py-2 text-sm mb-3"
+        />
+
+        <label className="block text-xs font-semibold text-[#5b6b60] mb-1">Sitio web</label>
+        <input
+          value={website}
+          onChange={(e) => setWebsite(e.target.value)}
+          placeholder="https://tunegocio.com"
+          className="w-full border border-black/15 rounded-lg px-3 py-2 text-sm"
+        />
+      </div>
 
       <div className="bg-white border border-black/10 rounded-xl p-5 mb-5">
         <h3 className="font-semibold text-sm mb-4">Datos fiscales (para tus facturas)</h3>

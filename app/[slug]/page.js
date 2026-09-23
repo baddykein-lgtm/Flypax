@@ -135,7 +135,7 @@ export default function PublicBusinessPage({ params }) {
       record.detail = (cfg.extraFields || [])
         .map((f) => {
           const v = extra[f.key];
-          return v ? f.label.replace("Â¿", "").replace("?", "") + ": " + v : null;
+          return v ? f.label.replace("¿", "").replace("?", "") + ": " + v : null;
         })
         .filter(Boolean)
         .join(" - ");
@@ -197,8 +197,7 @@ export default function PublicBusinessPage({ params }) {
       setOrderError("Error de conexion");
       setSending(false);
     }
-  }
-    return (
+  }  return (
     <main className="min-h-screen bg-ink text-white pb-16">
       <div className="max-w-xl mx-auto">
         <div className="px-6 pt-12 pb-8 bg-gradient-to-b from-[#1E332B] to-ink">
@@ -238,7 +237,7 @@ export default function PublicBusinessPage({ params }) {
                     )}
                   </div>
                   <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                    <div className="font-display text-mustard whitespace-nowrap">{Number(p.price)} EUR</div>
+                    <div className="font-display text-mustard whitespace-nowrap">{Number(p.price)}€</div>
                     {cart[p.id] > 0 && (
                       <span className="text-[10px] font-bold bg-mustard text-ink rounded-full px-1.5 py-0.5">
                         {cart[p.id]}x
@@ -273,7 +272,7 @@ export default function PublicBusinessPage({ params }) {
           {mode === "reservar" ? (
             done ? (
               <div className="bg-[#1E332B] border border-white/10 rounded-2xl p-6 text-center">
-                <p className="font-display text-lg mb-1">Â¡Listo!</p>
+                <p className="font-display text-lg mb-1">¡Listo!</p>
                 <p className="text-sm text-white/60">
                   Tu {cfg.resLabel.toLowerCase()} ha llegado a {business.name}.
                 </p>
@@ -338,7 +337,7 @@ export default function PublicBusinessPage({ params }) {
             )
           ) : orderSent ? (
             <div className="bg-[#1E332B] border border-white/10 rounded-2xl p-6 text-center">
-              <p className="font-display text-lg mb-1">Â¡Pedido enviado!</p>
+              <p className="font-display text-lg mb-1">¡Pedido enviado!</p>
               <p className="text-sm text-white/60">Tu pedido ha llegado a cocina. Mesa {tableNumber}.</p>
             </div>
           ) : (
@@ -379,7 +378,7 @@ export default function PublicBusinessPage({ params }) {
               />
 
               {cartCount === 0 ? (
-                <p className="text-sm text-white/40">AÃ±ade productos de la carta para pedir.</p>
+                <p className="text-sm text-white/40">Añade productos de la carta para pedir.</p>
               ) : !tableNumber ? (
                 <p className="text-sm text-white/40">Elige tu mesa para continuar.</p>
               ) : (
@@ -426,7 +425,7 @@ export default function PublicBusinessPage({ params }) {
                       disabled={sending}
                       className="w-full bg-mustard text-ink font-semibold py-3 rounded-full text-sm disabled:opacity-60"
                     >
-                      {sending ? "Enviando..." : "Enviar pedido (" + cartTotal.toFixed(2) + " EUR)"}
+                      {sending ? "Enviando..." : "Enviar pedido (" + cartTotal.toFixed(2) + "€)"}
                     </button>
                   ) : (
                     <button
@@ -434,7 +433,7 @@ export default function PublicBusinessPage({ params }) {
                       disabled={sending || (verifiedTable && !payMethod)}
                       className="w-full bg-mustard text-ink font-semibold py-3 rounded-full text-sm disabled:opacity-60"
                     >
-                      {sending ? "Redirigiendo a pago..." : "Pagar ahora (" + cartTotal.toFixed(2) + " EUR)"}
+                      {sending ? "Redirigiendo a pago..." : "Pagar ahora (" + cartTotal.toFixed(2) + "€)"}
                     </button>
                   )}
                 </>
@@ -491,19 +490,19 @@ export default function PublicBusinessPage({ params }) {
                 <div className="min-w-0 flex-1 truncate">{l.product.name}</div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <button onClick={() => setCartQty(l.product.id, l.qty - 1)} className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center">
-                    âˆ’
+                    -
                   </button>
                   <span className="w-5 text-center">{l.qty}</span>
                   <button onClick={() => setCartQty(l.product.id, l.qty + 1)} className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center">
                     +
                   </button>
-                  <span className="w-14 text-right text-mustard font-display">{(l.qty * Number(l.product.price)).toFixed(2)} EUR</span>
+                  <span className="w-14 text-right text-mustard font-display">{(l.qty * Number(l.product.price)).toFixed(2)}€</span>
                 </div>
               </div>
             ))}
             <div className="flex justify-between font-display text-lg mt-4 mb-5">
               <span>Total</span>
-              <span className="text-mustard">{cartTotal.toFixed(2)} EUR</span>
+              <span className="text-mustard">{cartTotal.toFixed(2)}€</span>
             </div>
             <p className="text-xs text-white/40">Cierra este panel y sigue mas abajo para elegir mesa y forma de pago.</p>
           </div>
@@ -528,7 +527,7 @@ function ProductModal({ product, qty, setQty, canOrder, onClose, onConfirm }) {
         )}
         <div className="p-6">
           <h3 className="font-display text-xl mb-1">{product.name}</h3>
-          <div className="font-display text-mustard text-lg mb-3">{Number(product.price)} EUR</div>
+          <div className="font-display text-mustard text-lg mb-3">{Number(product.price)}€</div>
           {product.description && <p className="text-sm text-white/60 mb-3">{product.description}</p>}
           {product.tags && product.tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mb-5">
@@ -595,6 +594,14 @@ function Footer({ business }) {
         <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm6.9 8h-3a15 15 0 0 0-1.3-5.1A8 8 0 0 1 18.9 10zM12 4.1c.8 1.1 1.7 3 2 5.9h-4c.3-2.9 1.2-4.8 2-5.9zM4 12c0-.7.1-1.4.2-2h3.4c-.1.7-.1 1.3-.1 2s0 1.3.1 2H4.2A8 8 0 0 1 4 12zm1.1 4h3a15 15 0 0 0 1.3 5.1A8 8 0 0 1 5.1 16zm3-8h-3a8 8 0 0 1 4.3-5.1A15 15 0 0 0 8.1 8zM12 19.9c-.8-1.1-1.7-3-2-5.9h4c-.3 2.9-1.2 4.8-2 5.9zm2.6-7.9H9.4c-.1-.7-.1-1.3-.1-2s0-1.3.1-2h5.2c.1.7.1 1.3.1 2s0 1.3-.1 2zm.3 7.1a15 15 0 0 0 1.3-5.1h3a8 8 0 0 1-4.3 5.1zM16.4 14c.1-.7.1-1.3.1-2s0-1.3-.1-2h3.4c.1.6.2 1.3.2 2s-.1 1.4-.2 2h-3.4z" />
       ),
     },
+    business.google_reviews_url && {
+      key: "google",
+      href: business.google_reviews_url,
+      label: "Danos tu opinion en Google",
+      icon: (
+        <path d="M21.8 12.2c0-.7-.1-1.4-.2-2.1H12v4h5.5c-.2 1.3-1 2.4-2.1 3.1v2.6h3.4c2-1.8 3-4.5 3-7.6z" />
+      ),
+    },
   ].filter(Boolean);
 
   const hasMap = business.latitude != null && business.longitude != null;
@@ -604,6 +611,7 @@ function Footer({ business }) {
     <div className="px-6 mt-8">
       {hasMap && (
         <a
+        
           href={"https://www.google.com/maps/dir/?api=1&destination=" + business.latitude + "," + business.longitude}
           target="_blank"
           rel="noopener noreferrer"
@@ -613,11 +621,22 @@ function Footer({ business }) {
           <span className="absolute bottom-3 right-3 bg-ink/90 text-xs font-semibold px-3 py-1.5 rounded-full">Como llegar</span>
         </a>
       )}
+      {business.google_reviews_url && (
+        <a
+        
+          href={business.google_reviews_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block text-center bg-mustard text-ink font-semibold py-2.5 rounded-full text-sm mb-4"
+        >
+          Danos tu opinion en Google
+        </a>
+      )}
       {socials.length > 0 && (
         <div className="flex justify-center gap-3">
           {socials.map((s) => (
-            
             <a
+            
               key={s.key}
               href={s.href}
               target="_blank"
@@ -635,5 +654,3 @@ function Footer({ business }) {
     </div>
   );
 }
-
-
