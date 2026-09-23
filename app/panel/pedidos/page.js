@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useBusiness } from "@/lib/BusinessContext";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -10,11 +10,28 @@ const COLUMNS = [
   { status: "listo", label: "Listos para servir", next: "entregado", action: "Marcar entregado", color: "#7FA37A" },
 ];
 
+function playNotificationSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.5);
+  } catch (e) {}
+}
+
 export default function PedidosPage() {
   const { business } = useBusiness();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [advancingId, setAdvancingId] = useState(null);
+  const businessIdRef = useRef(business.id);
 
   async function loadOrders() {
     const { data } = await supabase
@@ -32,15 +49,55 @@ export default function PedidosPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [business.id]);
 
+  useEffect(() => {
+    businessIdRef.current = business.id;
+
+    if (typeof Notification !== "undefined" && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+
+    const channel = supabase
+      .channel("orders-" + business.id)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "orders", filter: "business_id=eq." + business.id },
+        (payload) => {
+          setOrders((prev) => [...prev, payload.new]);
+          playNotificationSound();
+          if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+            new Notification("Nuevo pedido - Mesa " + payload.new.table_number, {
+              body: (payload.new.items || []).map((l) => l.qty + "x " + l.name).join(", "),
+              icon: "/logo.png",
+            });
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "orders", filter: "business_id=eq." + business.id },
+        (payload) => {
+          setOrders((prev) => {
+            if (payload.new.status === "entregado") {
+              return prev.filter((o) => o.id !== payload.new.id);
+            }
+            return prev.map((o) => (o.id === payload.new.id ? payload.new : o));
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [business.id]);
+
   async function advance(id, next) {
     setAdvancingId(id);
     const { error } = await supabase.from("orders").update({ status: next }).eq("id", id);
     setAdvancingId(null);
     if (error) {
       alert("No se pudo actualizar el pedido: " + error.message);
-      return;
     }
-    loadOrders();
   }
 
   if (loading) return <p className="text-sm text-[#5b6b60]">Cargando...</p>;
@@ -80,10 +137,10 @@ export default function PedidosPage() {
                         Mesa {o.table_number}
                         {o.client_name ? " - " + o.client_name : ""}
                       </span>
-                      <span>{Number(o.total).toFixed(2)}€</span>
+                      <span>{Number(o.total).toFixed(2)} EUR</span>
                     </div>
                     <div className="text-xs text-[#5b6b60] mb-2">
-                      {(o.items || []).map((l) => `${l.qty}x ${l.name}`).join(", ")}
+                      {(o.items || []).map((l) => l.qty + "x " + l.name).join(", ")}
                     </div>
                     <div className="text-xs mb-2">
                       {o.paid ? (
