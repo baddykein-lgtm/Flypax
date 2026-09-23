@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
@@ -96,13 +96,13 @@ export default function QrPage() {
         canvasHolderRef.current.innerHTML = "";
         canvasHolderRef.current.appendChild(mainCanvas);
       }
-
       if (cfg.hasTableOrders) {
         const count = Math.min(Number(business.profile?.tables) || 6, 20);
-        const smallQr = await buildQrCanvas(url, 200);
         const cards = [];
         for (let n = 1; n <= count; n++) {
-          const card = buildTableCard(smallQr, n);
+          const tableUrl = url + "?mesa=" + n;
+          const qrForTable = await buildQrCanvas(tableUrl, 200);
+          const card = buildTableCard(qrForTable, n);
           cards.push({ n, dataUrl: card.toDataURL("image/png") });
         }
         if (!cancelled) setTableCards(cards);
