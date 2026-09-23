@@ -36,6 +36,24 @@ export default function AjustesPage() {
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [dangerMsg, setDangerMsg] = useState("");
+  const [platformRating, setPlatformRating] = useState(0);
+  const [platformComment, setPlatformComment] = useState("");
+  const [platformSending, setPlatformSending] = useState(false);
+  const [platformSent, setPlatformSent] = useState(false);
+
+  async function handleSendPlatformReview() {
+    if (platformRating === 0 || !platformComment.trim()) return;
+    setPlatformSending(true);
+    const { error } = await supabase.from("platform_reviews").insert({
+      business_id: business.id,
+      rating: platformRating,
+      comment: platformComment.trim(),
+    });
+    setPlatformSending(false);
+    if (!error) {
+      setPlatformSent(true);
+    }
+  }
 
   async function handleConnectStripe() {
     setConnecting(true);
@@ -410,6 +428,46 @@ export default function AjustesPage() {
           placeholder="Opcional"
           className="w-full border border-black/15 rounded-lg px-3 py-2 text-sm"
         />
+      </div>
+
+      <div className="bg-white border border-black/10 rounded-xl p-5 mb-5">
+        <h3 className="font-semibold text-sm mb-4">Valora Flypax</h3>
+        {platformSent ? (
+          <p className="text-sm text-green-700 font-semibold">
+            ¡Gracias! Revisaremos tu opinion y, si nos das permiso, la publicaremos en flypax.online/negocios.
+          </p>
+        ) : (
+          <>
+            <p className="text-sm text-[#5b6b60] mb-3">
+              ¿Que te esta pareciendo Flypax? Tu opinion puede aparecer en nuestra pagina para otros negocios.
+            </p>
+            <div className="flex gap-1 mb-3">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button
+                  key={n}
+                  onClick={() => setPlatformRating(n)}
+                  className={"text-2xl " + (n <= platformRating ? "text-mustard" : "text-black/15")}
+                >
+                  ★
+                </button>
+              ))}
+            </div>
+            <textarea
+              value={platformComment}
+              onChange={(e) => setPlatformComment(e.target.value)}
+              placeholder="Cuentanos tu experiencia..."
+              rows={3}
+              className="w-full border border-black/15 rounded-lg px-3 py-2 text-sm mb-3"
+            />
+            <button
+              onClick={handleSendPlatformReview}
+              disabled={platformSending || platformRating === 0 || !platformComment.trim()}
+              className="bg-mustard text-ink font-semibold px-5 py-2.5 rounded-full text-sm disabled:opacity-60"
+            >
+              {platformSending ? "Enviando..." : "Enviar valoracion"}
+            </button>
+          </>
+        )}
       </div>
 
       <div className="bg-white border border-red-200 rounded-xl p-5 mb-5">

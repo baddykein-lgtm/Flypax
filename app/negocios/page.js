@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { supabase } from "@/lib/supabaseClient";
 import { detectCountry } from "@/lib/geo";
 
 const FEATURES = [
@@ -15,9 +16,23 @@ const FEATURES = [
 
 export default function NegociosLandingPage() {
   const [geo, setGeo] = useState(null);
+  const [testimonials, setTestimonials] = useState([]);
 
   useEffect(() => {
     setGeo(detectCountry());
+  }, []);
+
+  useEffect(() => {
+    async function loadReviews() {
+      const { data } = await supabase
+        .from("platform_reviews")
+        .select("rating, comment, business_id, businesses(name)")
+        .eq("published", true)
+        .order("created_at", { ascending: false })
+        .limit(6);
+      setTestimonials(data || []);
+    }
+    loadReviews();
   }, []);
 
   return (
@@ -92,6 +107,22 @@ export default function NegociosLandingPage() {
           ))}
         </div>
       </section>
+
+      {testimonials.length > 0 && (
+        <section className="max-w-6xl mx-auto px-6 py-16">
+          <h2 className="text-2xl font-display mb-2">Lo que dicen nuestros negocios</h2>
+          <p className="text-white/55 mb-10 max-w-md">Opiniones reales de quienes ya usan Flypax cada dia.</p>
+          <div className="grid md:grid-cols-3 gap-4">
+            {testimonials.map((t, i) => (
+              <div key={i} className="bg-[#1E332B] border border-white/10 rounded-2xl p-6">
+                <p className="text-mustard text-sm mb-3">{"★".repeat(t.rating)}</p>
+                <p className="text-sm text-white/70 mb-4 leading-relaxed">"{t.comment}"</p>
+                <p className="text-xs font-semibold text-mustard">{t.businesses?.name}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <footer className="text-center py-10 text-white/40 text-sm">
         <div className="flex justify-center gap-4 mb-3">
