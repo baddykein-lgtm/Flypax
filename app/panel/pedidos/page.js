@@ -140,7 +140,12 @@ export default function PedidosPage() {
                       <span>{Number(o.total).toFixed(2)} EUR</span>
                     </div>
                     <div className="text-xs text-[#5b6b60] mb-2">
-                      {(o.items || []).map((l) => l.qty + "x " + l.name).join(", ")}
+                      {(o.items || []).map((l, i) => (
+                        <div key={i}>
+                          {l.qty}x {l.name}
+                          {l.note && <span className="italic text-[#8a958d]"> - {l.note}</span>}
+                        </div>
+                      ))}
                     </div>
                     <div className="text-xs mb-2">
                       {o.paid ? (

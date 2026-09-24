@@ -41,6 +41,7 @@ export default function PublicBusinessPage({ params }) {
   const [orderSent, setOrderSent] = useState(false);
   const [viewProduct, setViewProduct] = useState(null);
   const [modalQty, setModalQty] = useState(1);
+  const [modalNote, setModalNote] = useState("");
   const [showCartDrawer, setShowCartDrawer] = useState(false);
   const [payMethod, setPayMethod] = useState(null);
   const [orderError, setOrderError] = useState("");
@@ -107,26 +108,27 @@ export default function PublicBusinessPage({ params }) {
     .join(" - ");
 
   const cartLines = Object.entries(cart)
-    .map(([productId, qty]) => {
+    .map(([productId, entry]) => {
       const p = products.find((x) => x.id === productId);
-      return p ? { product: p, qty } : null;
+      return p ? { product: p, qty: entry.qty, note: entry.note || "" } : null;
     })
     .filter(Boolean);
   const cartTotal = cartLines.reduce((sum, l) => sum + l.qty * Number(l.product.price), 0);
   const cartCount = cartLines.reduce((sum, l) => sum + l.qty, 0);
 
-  function setCartQty(productId, qty) {
+  function setCartEntry(productId, qty, note) {
     setCart((c) => {
       const next = { ...c };
       if (qty <= 0) delete next[productId];
-      else next[productId] = qty;
+      else next[productId] = { qty, note: note || "" };
       return next;
     });
   }
 
   function openProduct(p) {
     setViewProduct(p);
-    setModalQty(cart[p.id] || 1);
+    setModalQty(cart[p.id]?.qty || 1);
+    setModalNote(cart[p.id]?.note || "");
   }
   function closeProduct() {
     setViewProduct(null);
@@ -172,7 +174,12 @@ export default function PublicBusinessPage({ params }) {
       business_id: business.id,
       table_number: tableNumber,
       client_name: clientName.trim() || null,
-      items: cartLines.map((l) => ({ name: l.product.name, qty: l.qty, price: Number(l.product.price) })),
+      items: cartLines.map((l) => ({
+        name: l.product.name,
+        qty: l.qty,
+        price: Number(l.product.price),
+        note: l.note || null,
+      })),
       total: cartTotal,
       status: "nuevo",
       paid: false,
@@ -199,7 +206,12 @@ export default function PublicBusinessPage({ params }) {
           slug: business.slug,
           tableNumber,
           clientName: clientName.trim() || null,
-          items: cartLines.map((l) => ({ name: l.product.name, qty: l.qty, price: Number(l.product.price) })),
+          items: cartLines.map((l) => ({
+            name: l.product.name,
+            qty: l.qty,
+            price: Number(l.product.price),
+            note: l.note || null,
+          })),
         }),
       });
       const data = await res.json();
@@ -277,9 +289,9 @@ export default function PublicBusinessPage({ params }) {
                   </div>
                   <div className="flex flex-col items-end gap-1 flex-shrink-0">
                     <div className="font-display text-mustard whitespace-nowrap">{Number(p.price)}€</div>
-                    {cart[p.id] > 0 && (
+                    {cart[p.id]?.qty > 0 && (
                       <span className="text-[10px] font-bold bg-mustard text-ink rounded-full px-1.5 py-0.5">
-                        {cart[p.id]}x
+                        {cart[p.id].qty}x
                       </span>
                     )}
                   </div>
@@ -430,7 +442,7 @@ export default function PublicBusinessPage({ params }) {
               ) : (
                 <>
                   <div className="text-sm text-white/60 mb-3">
-                    {cartLines.map((l) => l.qty + "x " + l.product.name).join(", ")}
+                    {cartLines.map((l) => l.qty + "x " + l.product.name + (l.note ? " (" + l.note + ")" : "")).join(", ")}
                   </div>
 
                   {verifiedTable ? (
@@ -561,10 +573,12 @@ export default function PublicBusinessPage({ params }) {
           product={viewProduct}
           qty={modalQty}
           setQty={setModalQty}
+          note={modalNote}
+          setNote={setModalNote}
           canOrder={cfg.hasTableOrders && mode === "pedido"}
           onClose={closeProduct}
           onConfirm={() => {
-            setCartQty(viewProduct.id, modalQty);
+            setCartEntry(viewProduct.id, modalQty, modalNote);
             closeProduct();
           }}
         />
@@ -593,18 +607,21 @@ export default function PublicBusinessPage({ params }) {
               </button>
             </div>
             {cartLines.map((l) => (
-              <div key={l.product.id} className="flex items-center justify-between gap-3 py-2 border-b border-white/10 text-sm">
-                <div className="min-w-0 flex-1 truncate">{l.product.name}</div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <button onClick={() => setCartQty(l.product.id, l.qty - 1)} className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center">
-                    -
-                  </button>
-                  <span className="w-5 text-center">{l.qty}</span>
-                  <button onClick={() => setCartQty(l.product.id, l.qty + 1)} className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center">
-                    +
-                  </button>
-                  <span className="w-14 text-right text-mustard font-display">{(l.qty * Number(l.product.price)).toFixed(2)}€</span>
+              <div key={l.product.id} className="py-2 border-b border-white/10 text-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0 flex-1 truncate">{l.product.name}</div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <button onClick={() => setCartEntry(l.product.id, l.qty - 1, l.note)} className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center">
+                      -
+                    </button>
+                    <span className="w-5 text-center">{l.qty}</span>
+                    <button onClick={() => setCartEntry(l.product.id, l.qty + 1, l.note)} className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center">
+                      +
+                    </button>
+                    <span className="w-14 text-right text-mustard font-display">{(l.qty * Number(l.product.price)).toFixed(2)}€</span>
+                  </div>
                 </div>
+                {l.note && <p className="text-xs text-white/40 italic mt-1">{l.note}</p>}
               </div>
             ))}
             <div className="flex justify-between font-display text-lg mt-4 mb-5">
@@ -621,7 +638,7 @@ export default function PublicBusinessPage({ params }) {
   return <span className="text-[10px] font-semibold bg-white/10 text-white/60 px-2 py-0.5 rounded-full">{children}</span>;
 }
 
-function ProductModal({ product, qty, setQty, canOrder, onClose, onConfirm }) {
+function ProductModal({ product, qty, setQty, note, setNote, canOrder, onClose, onConfirm }) {
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center" onClick={onClose}>
       <div className="bg-[#1E332B] w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
@@ -640,6 +657,19 @@ function ProductModal({ product, qty, setQty, canOrder, onClose, onConfirm }) {
                 <Tag key={t}>{t}</Tag>
               ))}
             </div>
+          )}
+          {canOrder && (
+            <>
+              <label className="block text-xs font-semibold text-white/50 mb-1">
+                Algun comentario para este producto (opcional)
+              </label>
+              <input
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Ej. sin hielo, para llevar..."
+                className="w-full bg-[#16231D] border border-white/15 rounded-lg px-3 py-2 text-sm mb-4"
+              />
+            </>
           )}
           {canOrder ? (
             <div className="flex items-center gap-3 mt-2">
