@@ -20,7 +20,7 @@ export async function POST(request) {
 
   const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
   if (userError || !userData?.user) {
-    return NextResponse.json({ error: "Token inválido" }, { status: 401 });
+    return NextResponse.json({ error: "Token invalido" }, { status: 401 });
   }
 
   const { data: invoice, error } = await supabaseAdmin
@@ -43,34 +43,30 @@ export async function POST(request) {
   const rowsHtml = (invoice.items || [])
     .map(
       (l) =>
-        `<tr><td style="padding:8px 0;">${escapeHtml(l.qty)}× ${escapeHtml(l.name)}</td><td style="text-align:right;">${(l.qty * l.price).toFixed(2)}€</td></tr>`
+        "<tr><td style=\"padding:8px 0;\">" + escapeHtml(l.qty) + "x " + escapeHtml(l.name) + "</td><td style=\"text-align:right;\">" + (l.qty * l.price).toFixed(2) + " EUR</td></tr>"
     )
     .join("");
 
-  const html = `
-    <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#1B2A22;">
-      <h2 style="margin-bottom:2px;">${escapeHtml(biz?.icon)} ${escapeHtml(biz?.name)}</h2>
-      ${biz?.tax_id ? `<p style="color:#666;font-size:13px;margin:0;">NIF/CIF: ${escapeHtml(biz.tax_id)}</p>` : ""}
-      ${biz?.address ? `<p style="color:#666;font-size:13px;margin:0 0 16px;">${escapeHtml(biz.address)}</p>` : ""}
-      <hr style="border:none;border-top:1px solid #eee;margin:16px 0;" />
-      <p style="font-size:13px;color:#666;">Factura para <b>${escapeHtml(invoice.client_name)}</b>${invoice.client_nif ? ` · NIF: ${escapeHtml(invoice.client_nif)}` : ""}</p>
-      <p style="font-size:13px;color:#666;">Fecha: ${escapeHtml(invoice.date)}</p>
-      <table style="width:100%;border-collapse:collapse;margin-top:16px;font-size:14px;">
-        ${rowsHtml}
-      </table>
-      <div style="border-top:1px solid #eee;margin-top:12px;padding-top:12px;font-size:14px;">
-        <div style="display:flex;justify-content:space-between;"><span>Base imponible</span><span>${Number(invoice.subtotal).toFixed(2)}€</span></div>
-        <div style="display:flex;justify-content:space-between;"><span>IVA (${invoice.iva_rate}%)</span><span>${Number(invoice.iva_amount).toFixed(2)}€</span></div>
-        <div style="display:flex;justify-content:space-between;font-weight:bold;font-size:17px;margin-top:6px;"><span>Total</span><span>${Number(invoice.total).toFixed(2)}€</span></div>
-      </div>
-    </div>
-  `;
+  const html =
+    "<div style=\"font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#1B2A22;\">" +
+    "<h2 style=\"margin-bottom:2px;\">" + escapeHtml(biz?.icon) + " " + escapeHtml(biz?.name) + "</h2>" +
+    (biz?.tax_id ? "<p style=\"color:#666;font-size:13px;margin:0;\">NIF/CIF: " + escapeHtml(biz.tax_id) + "</p>" : "") +
+    (biz?.address ? "<p style=\"color:#666;font-size:13px;margin:0 0 16px;\">" + escapeHtml(biz.address) + "</p>" : "") +
+    "<hr style=\"border:none;border-top:1px solid #eee;margin:16px 0;\" />" +
+    "<p style=\"font-size:13px;color:#666;\">Factura para <b>" + escapeHtml(invoice.client_name) + "</b>" + (invoice.client_nif ? " - NIF: " + escapeHtml(invoice.client_nif) : "") + "</p>" +
+    "<p style=\"font-size:13px;color:#666;\">Fecha: " + escapeHtml(invoice.date) + "</p>" +
+    "<table style=\"width:100%;border-collapse:collapse;margin-top:16px;font-size:14px;\">" + rowsHtml + "</table>" +
+    "<div style=\"border-top:1px solid #eee;margin-top:12px;padding-top:12px;font-size:14px;\">" +
+    "<div style=\"display:flex;justify-content:space-between;\"><span>Base imponible</span><span>" + Number(invoice.subtotal).toFixed(2) + " EUR</span></div>" +
+    "<div style=\"display:flex;justify-content:space-between;\"><span>IVA (" + invoice.iva_rate + "%)</span><span>" + Number(invoice.iva_amount).toFixed(2) + " EUR</span></div>" +
+    "<div style=\"display:flex;justify-content:space-between;font-weight:bold;font-size:17px;margin-top:6px;\"><span>Total</span><span>" + Number(invoice.total).toFixed(2) + " EUR</span></div>" +
+    "</div></div>";
 
   try {
     await resend.emails.send({
-      from: "Flypax <onboarding@resend.dev>",
+      from: "Flypax <facturas@flypax.online>",
       to: invoice.client_email,
-      subject: `Factura de ${biz?.name || "tu negocio"}`,
+      subject: "Factura de " + (biz?.name || "tu negocio"),
       html,
     });
   } catch (e) {

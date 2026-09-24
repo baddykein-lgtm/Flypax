@@ -6,9 +6,9 @@ import { supabase } from "@/lib/supabaseClient";
 
 function subLine(r) {
   const parts = [r.date, r.time];
-  if (r.people != null) parts.push(`${r.people} persona${r.people > 1 ? "s" : ""}`);
+  if (r.people != null) parts.push(r.people + " persona" + (r.people > 1 ? "s" : ""));
   if (r.detail) parts.push(r.detail);
-  return parts.join(" · ");
+  return parts.join(" - ");
 }
 
 function StatusTag({ status }) {
@@ -18,8 +18,24 @@ function StatusTag({ status }) {
     cancelada: "bg-red-100 text-red-700",
   };
   return (
-    <span className={`text-xs font-bold px-2.5 py-1 rounded-full capitalize ${map[status] || ""}`}>{status}</span>
+    <span className={"text-xs font-bold px-2.5 py-1 rounded-full capitalize " + (map[status] || "")}>{status}</span>
   );
+}
+
+function playNotificationSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.5);
+  } catch (e) {}
 }
 
 export default function ReservasPage() {
@@ -29,6 +45,9 @@ export default function ReservasPage() {
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [cancelingId, setCancelingId] = useState(null);
+  const [respondingId, setRespondingId] = useState(null);
+  const [rejectingId, setRejectingId] = useState(null);
+  const [rejectReason, setRejectReason] = useState("");
 
   const [clientName, setClientName] = useState("");
   const [phone, setPhone] = useState("");
@@ -50,6 +69,41 @@ export default function ReservasPage() {
   useEffect(() => {
     loadReservations();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [business.id]);
+
+  useEffect(() => {
+    if (typeof Notification !== "undefined" && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+
+    const channel = supabase
+      .channel("reservations-" + business.id)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "reservations", filter: "business_id=eq." + business.id },
+        (payload) => {
+          setReservations((prev) => [payload.new, ...prev]);
+          playNotificationSound();
+          if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+            new Notification("Nueva reserva - " + payload.new.client_name, {
+              body: subLine(payload.new),
+              icon: "/logo.png",
+            });
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "reservations", filter: "business_id=eq." + business.id },
+        (payload) => {
+          setReservations((prev) => prev.map((r) => (r.id === payload.new.id ? payload.new : r)));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [business.id]);
 
   function resetForm() {
@@ -80,10 +134,10 @@ export default function ReservasPage() {
       record.detail = (cfg.extraFields || [])
         .map((f) => {
           const v = extra[f.key];
-          return v ? `${f.label.replace("¿", "").replace("?", "")}: ${v}` : null;
+          return v ? f.label.replace("¿", "").replace("?", "") + ": " + v : null;
         })
         .filter(Boolean)
-        .join(" · ");
+        .join(" - ");
     }
 
     const { error } = await supabase.from("reservations").insert(record);
@@ -94,7 +148,6 @@ export default function ReservasPage() {
     }
     setShowModal(false);
     resetForm();
-    loadReservations();
   }
 
   async function cancelReservation(id) {
@@ -103,6 +156,25 @@ export default function ReservasPage() {
     setCancelingId(null);
     if (error) {
       alert("No se pudo cancelar la reserva: " + error.message);
+    }
+  }
+
+  async function respondReservation(id, action, reason) {
+    setRespondingId(id);
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const res = await fetch("/api/reservations/respond", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: session.access_token, reservationId: id, action, reason }),
+    });
+    const data = await res.json();
+    setRespondingId(null);
+    setRejectingId(null);
+    setRejectReason("");
+    if (!data.ok) {
+      alert("No se pudo actualizar la reserva: " + (data.error || ""));
       return;
     }
     loadReservations();
@@ -114,7 +186,7 @@ export default function ReservasPage() {
         <div>
           <h1 className="font-display text-2xl">Reservas</h1>
           <p className="text-sm text-[#5b6b60] mt-1">
-            Todo lo que llega desde tu página pública, o que añades tú a mano.
+            Todo lo que llega desde tu pagina publica, o que añades tu a mano.
           </p>
         </div>
         <button
@@ -126,11 +198,11 @@ export default function ReservasPage() {
       </div>
 
       {loading ? (
-        <p className="text-sm text-[#5b6b60]">Cargando…</p>
+        <p className="text-sm text-[#5b6b60]">Cargando...</p>
       ) : (
         <div className="bg-white border border-black/10 rounded-xl overflow-hidden">
           {reservations.length === 0 ? (
-            <div className="py-16 text-center text-sm text-[#8a958d]">Sin reservas todavía.</div>
+            <div className="py-16 text-center text-sm text-[#8a958d]">Sin reservas todavia.</div>
           ) : (
             reservations.map((r) => (
               <div
@@ -140,20 +212,65 @@ export default function ReservasPage() {
                 <div className="min-w-0">
                   <div className="font-semibold">
                     {r.client_name}{" "}
-                    <span className="text-[#8a958d] font-normal">{r.client_phone ? `· ${r.client_phone}` : ""}</span>
+                    <span className="text-[#8a958d] font-normal">{r.client_phone ? "- " + r.client_phone : ""}</span>
                   </div>
                   <div className="text-xs text-[#5b6b60] mt-0.5">{subLine(r)}</div>
                 </div>
                 <div className="flex items-center gap-3 flex-shrink-0">
                   <StatusTag status={r.status} />
-                  {r.status !== "cancelada" && (
-                    <button
-                      onClick={() => cancelReservation(r.id)}
-                      disabled={cancelingId === r.id}
-                      className="text-xs font-semibold text-[#5b6b60] disabled:opacity-50"
-                    >
-                      {cancelingId === r.id ? "..." : "Cancelar"}
-                    </button>
+                  {r.status === "pendiente" ? (
+                    rejectingId === r.id ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          value={rejectReason}
+                          onChange={(e) => setRejectReason(e.target.value)}
+                          placeholder="Motivo (opcional)"
+                          className="border border-black/15 rounded-lg px-2 py-1 text-xs"
+                        />
+                        <button
+                          onClick={() => respondReservation(r.id, "reject", rejectReason)}
+                          disabled={respondingId === r.id}
+                          className="text-xs font-semibold text-red-700 disabled:opacity-50"
+                        >
+                          Confirmar
+                        </button>
+                        <button
+                          onClick={() => {
+                            setRejectingId(null);
+                            setRejectReason("");
+                          }}
+                          className="text-xs text-[#8a958d]"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => respondReservation(r.id, "accept")}
+                          disabled={respondingId === r.id}
+                          className="text-xs font-semibold text-green-700 disabled:opacity-50"
+                        >
+                          {respondingId === r.id ? "..." : "Aceptar"}
+                        </button>
+                        <button
+                          onClick={() => setRejectingId(r.id)}
+                          className="text-xs font-semibold text-red-700"
+                        >
+                          Rechazar
+                        </button>
+                      </>
+                    )
+                  ) : (
+                    r.status !== "cancelada" && (
+                      <button
+                        onClick={() => cancelReservation(r.id)}
+                        disabled={cancelingId === r.id}
+                        className="text-xs font-semibold text-[#5b6b60] disabled:opacity-50"
+                      >
+                        {cancelingId === r.id ? "..." : "Cancelar"}
+                      </button>
+                    )
                   )}
                 </div>
               </div>
@@ -175,7 +292,7 @@ export default function ReservasPage() {
               className="w-full border border-black/15 rounded-lg px-3 py-2 text-sm mb-3"
             />
 
-            <label className="block text-xs font-semibold text-[#5b6b60] mb-1">Teléfono</label>
+            <label className="block text-xs font-semibold text-[#5b6b60] mb-1">Telefono</label>
             <input
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
@@ -244,7 +361,7 @@ export default function ReservasPage() {
                 disabled={saving}
                 className="bg-mustard text-ink font-semibold px-5 py-2.5 rounded-full text-sm disabled:opacity-60"
               >
-                {saving ? "Guardando…" : "Confirmar"}
+                {saving ? "Guardando..." : "Confirmar"}
               </button>
             </div>
           </div>

@@ -28,6 +28,7 @@ export default function PublicBusinessPage({ params }) {
 
   const [clientName, setClientName] = useState("");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [people, setPeople] = useState(2);
@@ -139,6 +140,7 @@ export default function PublicBusinessPage({ params }) {
       business_id: business.id,
       client_name: clientName.trim(),
       client_phone: phone.trim() || null,
+      client_email: email.trim() || null,
       date: date || new Date().toISOString().slice(0, 10),
       time: time || "12:00",
       status: "pendiente",
@@ -312,6 +314,7 @@ export default function PublicBusinessPage({ params }) {
                 <p className="font-display text-lg mb-1">¡Listo!</p>
                 <p className="text-sm text-white/60">
                   Tu {cfg.resLabel.toLowerCase()} ha llegado a {business.name}.
+                  {email.trim() ? " Te avisaremos por email en cuanto se confirme." : ""}
                 </p>
               </div>
             ) : (
@@ -327,6 +330,12 @@ export default function PublicBusinessPage({ params }) {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="Telefono (opcional)"
+                  className="w-full bg-[#16231D] border border-white/15 rounded-lg px-3 py-2.5 text-sm mb-3"
+                />
+                <input
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Email (opcional, para avisarte)"
                   className="w-full bg-[#16231D] border border-white/15 rounded-lg px-3 py-2.5 text-sm mb-3"
                 />
                 <div className="flex gap-2 mb-3">
