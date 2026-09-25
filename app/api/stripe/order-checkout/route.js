@@ -66,6 +66,7 @@ export async function POST(request) {
 
     return NextResponse.json({ url: session.url, orderId: order.id });
   } catch (e) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    console.error("Error en order-checkout:", e);
+    return NextResponse.json({ error: e.message || "Error desconocido de Stripe" }, { status: 500 });
   }
 }
