@@ -29,7 +29,7 @@ export async function POST(request) {
       client_name: clientName || null,
       items,
       total,
-      status: "nuevo",
+      status: "pendiente_pago",
       paid: false,
     })
     .select()
