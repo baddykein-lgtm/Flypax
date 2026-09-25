@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
+// Stripe redirige aqui despues de que el negocio autoriza la conexion.
+// Cambiamos el "code" de un solo uso por el ID de cuenta conectada real,
+// usando la clave secreta de la cuenta plataforma de Connect (distinta
+// de la clave de las suscripciones).
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
@@ -10,6 +14,7 @@ export async function GET(request) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
 
   if (oauthError || !code || !businessId) {
+    console.error("Fallo antes de intercambiar codigo:", { oauthError, code, businessId });
     return NextResponse.redirect(siteUrl + "/panel/ajustes?connect=error");
   }
 
@@ -26,6 +31,7 @@ export async function GET(request) {
     const data = await res.json();
 
     if (!data.stripe_user_id) {
+      console.error("Fallo en callback de Connect, respuesta de Stripe:", data);
       return NextResponse.redirect(siteUrl + "/panel/ajustes?connect=error");
     }
 
@@ -39,6 +45,7 @@ export async function GET(request) {
 
     return NextResponse.redirect(siteUrl + "/panel/ajustes?connect=success");
   } catch (e) {
+    console.error("Excepcion en callback de Connect:", e);
     return NextResponse.redirect(siteUrl + "/panel/ajustes?connect=error");
   }
 }
