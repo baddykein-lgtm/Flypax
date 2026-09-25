@@ -147,7 +147,7 @@ export default function CartaPage() {
           Todavia no has añadido nada a tu carta.
         </div>
       ) : (
-        <div className="grid grid-cols-3 gap-3.5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
           {products.map((p) => (
             <div key={p.id} className="bg-white border border-black/10 rounded-xl overflow-hidden">
               <button onClick={() => openEdit(p)} className="w-full text-left">
