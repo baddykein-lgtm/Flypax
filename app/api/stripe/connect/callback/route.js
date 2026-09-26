@@ -1,10 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
-// Stripe redirige aqui despues de que el negocio autoriza la conexion.
-// Cambiamos el "code" de un solo uso por el ID de cuenta conectada real,
-// usando la clave secreta de la cuenta plataforma de Connect (distinta
-// de la clave de las suscripciones).
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
@@ -21,7 +17,10 @@ export async function GET(request) {
   try {
     const res = await fetch("https://connect.stripe.com/oauth/token", {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Authorization: "Bearer " + process.env.STRIPE_CONNECT_SECRET_KEY,
+      },
       body: new URLSearchParams({
         client_secret: process.env.STRIPE_CONNECT_SECRET_KEY,
         code,
