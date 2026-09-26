@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -32,7 +32,7 @@ export default function AdminPage() {
           return;
         }
         if (!res.ok) {
-          setLoadError("No se pudo cargar el panel de administración. Inténtalo de nuevo.");
+          setLoadError("No se pudo cargar el panel de administracion. Intentalo de nuevo.");
           setLoading(false);
           return;
         }
@@ -40,7 +40,7 @@ export default function AdminPage() {
         setData(json);
         setLoading(false);
       } catch (e) {
-        setLoadError("Error de conexión con el servidor.");
+        setLoadError("Error de conexiÃ³n con el servidor.");
         setLoading(false);
       }
     }
@@ -50,7 +50,7 @@ export default function AdminPage() {
   if (loading)
     return (
       <div className="min-h-screen flex items-center justify-center bg-ink text-white/50 text-sm">
-        Cargando…
+        Cargandoâ€¦
       </div>
     );
   if (denied)
@@ -68,14 +68,19 @@ export default function AdminPage() {
 
   return (
     <main className="min-h-screen bg-paper text-[#1B2A22] p-8">
-      <h1 className="font-display text-2xl mb-1">Panel de administración</h1>
+      <div className="flex items-center justify-between mb-1">
+        <h1 className="font-display text-2xl">Panel de administracion</h1>
+        <Link href="/admin/afiliados" className="text-sm font-semibold text-mustard">
+          Ver afiliados -
+        </Link>
+      </div>
       <p className="text-sm text-[#5b6b60] mb-6">Vista global de todos los negocios en Flypax.</p>
 
       <div className="grid grid-cols-4 gap-3.5 mb-8">
         <Kpi label="Negocios" value={data.totalBusinesses} />
         <Kpi label="Reservas totales" value={data.totalReservations} />
         <Kpi label="Pedidos en mesa" value={data.totalOrders} />
-        <Kpi label="Ingresos facturados" value={`${data.totalRevenue}€`} />
+        <Kpi label="Ingresos facturados" value={`${data.totalRevenue}â‚¬`} />
       </div>
 
       <div className="bg-white border border-black/10 rounded-xl overflow-hidden">
@@ -90,7 +95,7 @@ export default function AdminPage() {
               <span>{b.icon}</span>
               <div>
                 <div className="font-semibold">{b.name}</div>
-                <div className="text-xs text-[#5b6b60]">{b.city || "—"} · /{b.slug}</div>
+                <div className="text-xs text-[#5b6b60]">{b.city || "â€”"} Â· /{b.slug}</div>
               </div>
             </div>
             <span className="text-xs text-[#5b6b60]">

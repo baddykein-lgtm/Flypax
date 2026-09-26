@@ -115,6 +115,8 @@ export default function OnboardingPage() {
       hours[i] = days[i] ? (categoryId === "restaurante" ? "13:00-16:30" : "9:30-20:00") : null;
     });
 
+    const referredBy = typeof window !== "undefined" ? localStorage.getItem("flypax_ref") : null;
+
     const { data: newBusiness, error: insertError } = await supabase
       .from("businesses")
       .insert({
@@ -129,6 +131,7 @@ export default function OnboardingPage() {
         longitude,
         hours,
         profile: answers,
+        referred_by: referredBy,
       })
       .select()
       .single();
@@ -139,9 +142,6 @@ export default function OnboardingPage() {
       return;
     }
 
-    // Enlazamos el negocio recien creado con la suscripcion que Stripe
-    // haya podido dejar ya activa para este email (si el cliente vino de
-    // /suscribirse y pago antes de llegar aqui).
     try {
       const {
         data: { session },

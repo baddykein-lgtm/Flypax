@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import { detectCountry } from "@/lib/geo";
@@ -13,6 +14,17 @@ const FEATURES = [
   { icon: "🧾", title: "Facturas", text: "Crea facturas simples a partir de tu carta y controla qué está cobrado." },
   { icon: "🗺️", title: "Directorio", text: "Apareces junto a otros negocios de tu zona — más clientes te descubren." },
 ];
+
+function ReferralCapture() {
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const ref = searchParams.get("ref");
+    if (ref) {
+      localStorage.setItem("flypax_ref", ref);
+    }
+  }, [searchParams]);
+  return null;
+}
 
 export default function NegociosLandingPage() {
   const [geo, setGeo] = useState(null);
@@ -37,6 +49,10 @@ export default function NegociosLandingPage() {
 
   return (
     <main>
+      <Suspense fallback={null}>
+        <ReferralCapture />
+      </Suspense>
+
       <nav className="max-w-6xl mx-auto flex items-center justify-between px-6 py-6">
         <Link href="/" className="flex items-center">
           <img src="/logo.png" alt="Flypax" className="h-8 w-auto" />
