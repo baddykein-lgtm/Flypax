@@ -446,27 +446,34 @@ export default function PublicBusinessPage({ params }) {
                   </div>
 
                   {verifiedTable ? (
-                    <div className="flex bg-[#16231D] rounded-lg p-1 mb-3">
-                      <button
-                        onClick={() => setPayMethod("barra")}
-                        className={
-                          "flex-1 py-2 rounded-md text-xs font-semibold " +
-                          (payMethod === "barra" ? "bg-white text-ink" : "text-white/60")
-                        }
-                      >
-                        Pagar en barra
-                      </button>
-                      <button
-                        onClick={() => setPayMethod("online")}
-                        disabled={!canAcceptOnlinePayment}
-                        className={
-                          "flex-1 py-2 rounded-md text-xs font-semibold disabled:opacity-40 " +
-                          (payMethod === "online" ? "bg-white text-ink" : "text-white/60")
-                        }
-                      >
-                        Pagar ahora
-                      </button>
-                    </div>
+                    <>
+                      {cartTotal < 4 && (
+                        <p className="text-xs text-mustard mb-2 font-semibold">
+                          Para este tipo de importes aconsejamos pagar en mesa
+                        </p>
+                      )}
+                      <div className="flex bg-[#16231D] rounded-lg p-1 mb-3">
+                        <button
+                          onClick={() => setPayMethod("barra")}
+                          className={
+                            "flex-1 py-2 rounded-md text-xs font-semibold " +
+                            (payMethod === "barra" ? "bg-white text-ink" : "text-white/60")
+                          }
+                        >
+                          Pagar en barra
+                        </button>
+                        <button
+                          onClick={() => setPayMethod("online")}
+                          disabled={!canAcceptOnlinePayment}
+                          className={
+                            "flex-1 py-2 rounded-md text-xs font-semibold disabled:opacity-40 " +
+                            (payMethod === "online" ? "bg-white text-ink" : "text-white/60")
+                          }
+                        >
+                          Pagar ahora
+                        </button>
+                      </div>
+                    </>
                   ) : (
                     <p className="text-xs text-mustard mb-3 font-semibold">Pago online obligatorio para este pedido</p>
                   )}
