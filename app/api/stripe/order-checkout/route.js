@@ -3,9 +3,11 @@ import { stripeConnect } from "@/lib/stripeConnect";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function POST(request) {
-  const { businessId, slug, tableNumber, clientName, items } = await request.json();
+  const { businessId, slug, tableNumber, fulfillment, clientName, clientEmail, items } = await request.json();
 
-  if (!businessId || !tableNumber || !items || items.length === 0) {
+  const isPickup = fulfillment === "recoger";
+
+  if (!businessId || (!isPickup && !tableNumber) || !items || items.length === 0) {
     return NextResponse.json({ error: "Faltan datos del pedido" }, { status: 400 });
   }
 
@@ -25,8 +27,10 @@ export async function POST(request) {
     .from("orders")
     .insert({
       business_id: businessId,
-      table_number: tableNumber,
+      table_number: isPickup ? null : tableNumber,
+      fulfillment: isPickup ? "recoger" : "mesa",
       client_name: clientName || null,
+      client_email: isPickup ? clientEmail || null : null,
       items,
       total,
       status: "pendiente_pago",

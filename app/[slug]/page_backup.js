@@ -47,8 +47,6 @@ export default function PublicBusinessPage({ params }) {
   const [showCartDrawer, setShowCartDrawer] = useState(false);
   const [payMethod, setPayMethod] = useState(null);
   const [orderError, setOrderError] = useState("");
-  const [pickupName, setPickupName] = useState("");
-  const [pickupEmail, setPickupEmail] = useState("");
 
   const [reviews, setReviews] = useState([]);
   const [reviewName, setReviewName] = useState("");
@@ -101,9 +99,6 @@ export default function PublicBusinessPage({ params }) {
   const tableCount = Math.min(Number(business.profile?.tables) || 8, 20);
   const canAcceptOnlinePayment = business.stripe_connect_status === "connected";
   const avgRating = reviews.length > 0 ? reviews.reduce((a, r) => a + r.rating, 0) / reviews.length : null;
-  const isPickupMode = mode === "recoger";
-  const isTableMode = mode === "pedido";
-  const canOrderNow = isPickupMode || isTableMode;
 
   const grouped = {};
   products.forEach((p) => {
@@ -169,7 +164,8 @@ export default function PublicBusinessPage({ params }) {
     await supabase.from("reservations").insert(record);
     setSending(false);
     setDone(true);
-  }  async function handleCallWaiter() {
+  }
+  async function handleCallWaiter() {
     if (!verifiedTable) return;
     setCallingWaiter(true);
     await supabase.from("orders").insert({
@@ -185,20 +181,16 @@ export default function PublicBusinessPage({ params }) {
     setWaiterCalled(true);
     setTimeout(() => setWaiterCalled(false), 60000);
   }
-
   async function handleSendOrderCounter() {
-    if (isTableMode && !tableNumber) return;
-    if (isPickupMode && !pickupName.trim()) return;
+    if (!tableNumber) return;
     if (cartLines.length === 0) return;
     setSending(true);
     setOrderError("");
 
     await supabase.from("orders").insert({
       business_id: business.id,
-      table_number: isTableMode ? tableNumber : null,
-      fulfillment: isPickupMode ? "recoger" : "mesa",
-      client_name: (isPickupMode ? pickupName : clientName).trim() || null,
-      client_email: isPickupMode ? pickupEmail.trim() || null : null,
+      table_number: tableNumber,
+      client_name: clientName.trim() || null,
       items: cartLines.map((l) => ({
         name: l.product.name,
         qty: l.qty,
@@ -217,8 +209,7 @@ export default function PublicBusinessPage({ params }) {
   }
 
   async function handlePayOnline() {
-    if (isTableMode && !tableNumber) return;
-    if (isPickupMode && !pickupName.trim()) return;
+    if (!tableNumber) return;
     if (cartLines.length === 0) return;
     setSending(true);
     setOrderError("");
@@ -230,10 +221,8 @@ export default function PublicBusinessPage({ params }) {
         body: JSON.stringify({
           businessId: business.id,
           slug: business.slug,
-          tableNumber: isTableMode ? tableNumber : null,
-          fulfillment: isPickupMode ? "recoger" : "mesa",
-          clientName: (isPickupMode ? pickupName : clientName).trim() || null,
-          clientEmail: isPickupMode ? pickupEmail.trim() || null : null,
+          tableNumber,
+          clientName: clientName.trim() || null,
           items: cartLines.map((l) => ({
             name: l.product.name,
             qty: l.qty,
@@ -335,21 +324,15 @@ export default function PublicBusinessPage({ params }) {
             <div className="flex bg-[#1E332B] rounded-xl p-1 mb-4">
               <button
                 onClick={() => setMode("reservar")}
-                className={"flex-1 py-2 rounded-lg text-xs font-semibold " + (mode === "reservar" ? "bg-white text-ink" : "text-white/60")}
+                className={"flex-1 py-2 rounded-lg text-sm font-semibold " + (mode === "reservar" ? "bg-white text-ink" : "text-white/60")}
               >
                 {cfg.resLabel}
               </button>
               <button
                 onClick={() => setMode("pedido")}
-                className={"flex-1 py-2 rounded-lg text-xs font-semibold " + (mode === "pedido" ? "bg-white text-ink" : "text-white/60")}
+                className={"flex-1 py-2 rounded-lg text-sm font-semibold " + (mode === "pedido" ? "bg-white text-ink" : "text-white/60")}
               >
                 Pedir en mi mesa
-              </button>
-              <button
-                onClick={() => setMode("recoger")}
-                className={"flex-1 py-2 rounded-lg text-xs font-semibold " + (mode === "recoger" ? "bg-white text-ink" : "text-white/60")}
-              >
-                Para llevar
               </button>
             </div>
           )}
@@ -430,89 +413,7 @@ export default function PublicBusinessPage({ params }) {
           ) : orderSent ? (
             <div className="bg-[#1E332B] border border-white/10 rounded-2xl p-6 text-center">
               <p className="font-display text-lg mb-1">¡Pedido enviado!</p>
-              <p className="text-sm text-white/60">
-                {isPickupMode
-                  ? "Te avisaremos por email en cuanto este listo para recoger."
-                  : "Tu pedido ha llegado a cocina. Mesa " + tableNumber + "."}
-              </p>
-            </div>
-          ) : isPickupMode ? (
-            <div className="bg-[#1E332B] border border-white/10 rounded-2xl p-6">
-              <h3 className="font-display text-lg mb-4">Para llevar</h3>
-              <input
-                value={pickupName}
-                onChange={(e) => setPickupName(e.target.value)}
-                placeholder="Tu nombre"
-                className="w-full bg-[#16231D] border border-white/15 rounded-lg px-3 py-2.5 text-sm mb-3"
-              />
-              <input
-                value={pickupEmail}
-                onChange={(e) => setPickupEmail(e.target.value)}
-                placeholder="Email (para avisarte cuando este listo)"
-                className="w-full bg-[#16231D] border border-white/15 rounded-lg px-3 py-2.5 text-sm mb-4"
-              />
-
-              {cartCount === 0 ? (
-                <p className="text-sm text-white/40">Añade productos de la carta para pedir.</p>
-              ) : (
-                <>
-                  <div className="text-sm text-white/60 mb-3">
-                    {cartLines.map((l) => l.qty + "x " + l.product.name + (l.note ? " (" + l.note + ")" : "")).join(", ")}
-                  </div>
-
-                  {cartTotal < 4 && (
-                    <p className="text-xs text-mustard mb-2 font-semibold">
-                      Para este tipo de importes aconsejamos pagar al recoger
-                    </p>
-                  )}
-
-                  <div className="flex bg-[#16231D] rounded-lg p-1 mb-3">
-                    <button
-                      onClick={() => setPayMethod("barra")}
-                      className={
-                        "flex-1 py-2 rounded-md text-xs font-semibold " +
-                        (payMethod === "barra" ? "bg-white text-ink" : "text-white/60")
-                      }
-                    >
-                      Pagar al recoger
-                    </button>
-                    <button
-                      onClick={() => setPayMethod("online")}
-                      disabled={!canAcceptOnlinePayment}
-                      className={
-                        "flex-1 py-2 rounded-md text-xs font-semibold disabled:opacity-40 " +
-                        (payMethod === "online" ? "bg-white text-ink" : "text-white/60")
-                      }
-                    >
-                      Pagar ahora
-                    </button>
-                  </div>
-
-                  {orderError && <p className="text-xs text-red-400 mb-3">{orderError}</p>}
-
-                  {!pickupName.trim() ? (
-                    <p className="text-sm text-white/40">Escribe tu nombre para continuar.</p>
-                  ) : payMethod === "barra" ? (
-                    <button
-                      onClick={handleSendOrderCounter}
-                      disabled={sending}
-                      className="w-full bg-mustard text-ink font-semibold py-3 rounded-full text-sm disabled:opacity-60"
-                    >
-                      {sending ? "Enviando..." : "Enviar pedido (" + cartTotal.toFixed(2) + "€)"}
-                    </button>
-                  ) : payMethod === "online" ? (
-                    <button
-                      onClick={handlePayOnline}
-                      disabled={sending}
-                      className="w-full bg-mustard text-ink font-semibold py-3 rounded-full text-sm disabled:opacity-60"
-                    >
-                      {sending ? "Redirigiendo a pago..." : "Pagar ahora (" + cartTotal.toFixed(2) + "€)"}
-                    </button>
-                  ) : (
-                    <p className="text-sm text-white/40">Elige como quieres pagar.</p>
-                  )}
-                </>
-              )}
+              <p className="text-sm text-white/60">Tu pedido ha llegado a cocina. Mesa {tableNumber}.</p>
             </div>
           ) : (
             <div className="bg-[#1E332B] border border-white/10 rounded-2xl p-6">
@@ -621,7 +522,9 @@ export default function PublicBusinessPage({ params }) {
               )}
             </div>
           )}
-        </div>        <div className="px-6 mt-10">
+        </div>
+
+        <div className="px-6 mt-10">
           <h3 className="font-display text-lg mb-4">Reseñas</h3>
 
           {reviewSent ? (
@@ -696,7 +599,7 @@ export default function PublicBusinessPage({ params }) {
           setQty={setModalQty}
           note={modalNote}
           setNote={setModalNote}
-          canOrder={cfg.hasTableOrders && canOrderNow}
+          canOrder={cfg.hasTableOrders && mode === "pedido"}
           onClose={closeProduct}
           onConfirm={() => {
             setCartEntry(viewProduct.id, modalQty, modalNote);
@@ -718,7 +621,7 @@ export default function PublicBusinessPage({ params }) {
           ✓ Camarero avisado
         </div>
       )}
-      {cfg.hasTableOrders && canOrderNow && cartCount > 0 && !showCartDrawer && (
+      {cfg.hasTableOrders && mode === "pedido" && cartCount > 0 && !showCartDrawer && (
         <button
           onClick={() => setShowCartDrawer(true)}
           className="fixed bottom-5 right-5 z-40 bg-mustard text-ink rounded-full shadow-xl px-5 py-3.5 flex items-center gap-2 font-semibold text-sm"
@@ -768,9 +671,7 @@ export default function PublicBusinessPage({ params }) {
       )}
     </main>
   );
-}
-
-function Tag({ children }) {
+}function Tag({ children }) {
   return <span className="text-[10px] font-semibold bg-white/10 text-white/60 px-2 py-0.5 rounded-full">{children}</span>;
 }
 
@@ -925,3 +826,4 @@ function Footer({ business }) {
     </div>
   );
 }
+
