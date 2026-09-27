@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { resend } from "@/lib/resend";
 
 export async function POST(request) {
   const { token, businessId } = await request.json();
@@ -15,7 +16,7 @@ export async function POST(request) {
 
   const { data: business } = await supabaseAdmin
     .from("businesses")
-    .select("id, owner_id")
+    .select("id, owner_id, name, slug")
     .eq("id", businessId)
     .maybeSingle();
   if (!business || business.owner_id !== userData.user.id) {
@@ -24,7 +25,7 @@ export async function POST(request) {
 
   const { data: sub } = await supabaseAdmin
     .from("subscriptions")
-    .select("stripe_subscription_id")
+    .select("stripe_subscription_id, status")
     .eq("business_id", businessId)
     .maybeSingle();
 
@@ -40,6 +41,20 @@ export async function POST(request) {
       .from("subscriptions")
       .update({ status: "canceling" })
       .eq("business_id", businessId);
+
+    try {
+      await resend.emails.send({
+        from: "Flypax <facturas@flypax.online>",
+        to: process.env.ADMIN_EMAILS,
+        subject: "Cancelacion: " + business.name + " ha cancelado su suscripcion",
+        html:
+          "<p><b>" + business.name + "</b> (/" + business.slug + ") ha cancelado su suscripcion.</p>" +
+          "<p>Estado previo: " + (sub.status || "desconocido") + "</p>" +
+          "<p>Email del propietario: " + userData.user.email + "</p>",
+      });
+    } catch (e) {
+      // no bloqueamos la cancelacion si falla el email de aviso
+    }
 
     return NextResponse.json({ ok: true });
   } catch (e) {

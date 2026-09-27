@@ -28,6 +28,20 @@ function playNotificationSound() {
   } catch (e) {}
 }
 
+function notifyTitle(order) {
+  if (order.request_type === "camarero") {
+    return "🔔 Mesa " + order.table_number + " solicita camarero";
+  }
+  return "Nuevo pedido - Mesa " + order.table_number;
+}
+
+function notifyBody(order) {
+  if (order.request_type === "camarero") {
+    return "El cliente necesita atencion";
+  }
+  return (order.items || []).map((l) => l.qty + "x " + l.name).join(", ");
+}
+
 export default function PedidosPage() {
   const { business } = useBusiness();
   const [orders, setOrders] = useState([]);
@@ -68,8 +82,8 @@ export default function PedidosPage() {
           setOrders((prev) => [...prev, payload.new]);
           playNotificationSound();
           if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-            new Notification("Nuevo pedido - Mesa " + payload.new.table_number, {
-              body: (payload.new.items || []).map((l) => l.qty + "x " + l.name).join(", "),
+            new Notification(notifyTitle(payload.new), {
+              body: notifyBody(payload.new),
               icon: "/logo.png",
             });
           }
@@ -90,7 +104,7 @@ export default function PedidosPage() {
             playNotificationSound();
             if (typeof Notification !== "undefined" && Notification.permission === "granted") {
               new Notification("Pedido pagado - Mesa " + payload.new.table_number, {
-                body: (payload.new.items || []).map((l) => l.qty + "x " + l.name).join(", "),
+                body: notifyBody(payload.new),
                 icon: "/logo.png",
               });
             }
@@ -144,36 +158,51 @@ export default function PedidosPage() {
                   <div
                     key={o.id}
                     className="rounded-lg p-3 mb-2.5 border-l-4"
-                    style={{ borderLeftColor: col.color, background: "#F0ECE1" }}
+                    style={{
+                      borderLeftColor: o.request_type === "camarero" ? "#D94F4F" : col.color,
+                      background: o.request_type === "camarero" ? "#FBEAEA" : "#F0ECE1",
+                    }}
                   >
-                    <div className="flex justify-between text-sm font-bold mb-1">
-                      <span>
-                        Mesa {o.table_number}
-                        {o.client_name ? " - " + o.client_name : ""}
-                      </span>
-                      <span>{Number(o.total).toFixed(2)} EUR</span>
-                    </div>
-                    <div className="text-xs text-[#5b6b60] mb-2">
-                      {(o.items || []).map((l, i) => (
-                        <div key={i}>
-                          {l.qty}x {l.name}
-                          {l.note && <span className="italic text-[#8a958d]"> - {l.note}</span>}
+                    {o.request_type === "camarero" ? (
+                      <div className="flex items-center gap-2 text-sm font-bold mb-1">
+                        <span>🔔 Mesa {o.table_number} solicita camarero</span>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex justify-between text-sm font-bold mb-1">
+                          <span>
+                            Mesa {o.table_number}
+                            {o.client_name ? " - " + o.client_name : ""}
+                          </span>
+                          <span>{Number(o.total).toFixed(2)} EUR</span>
                         </div>
-                      ))}
-                    </div>
-                    <div className="text-xs mb-2">
-                      {o.paid ? (
-                        <span className="font-bold text-green-700">Pagado</span>
-                      ) : (
-                        <span className="font-bold text-amber-700">Cobrar en mesa</span>
-                      )}
-                    </div>
+                        <div className="text-xs text-[#5b6b60] mb-2">
+                          {(o.items || []).map((l, i) => (
+                            <div key={i}>
+                              {l.qty}x {l.name}
+                              {l.note && <span className="italic text-[#8a958d]"> - {l.note}</span>}
+                            </div>
+                          ))}
+                        </div>
+                        <div className="text-xs mb-2">
+                          {o.paid ? (
+                            <span className="font-bold text-green-700">Pagado</span>
+                          ) : (
+                            <span className="font-bold text-amber-700">Cobrar en mesa</span>
+                          )}
+                        </div>
+                      </>
+                    )}
                     <button
                       onClick={() => advance(o.id, col.next)}
                       disabled={advancingId === o.id}
                       className="w-full bg-mustard text-ink font-semibold py-1.5 rounded-full text-xs disabled:opacity-60"
                     >
-                      {advancingId === o.id ? "..." : col.action}
+                      {advancingId === o.id
+                        ? "..."
+                        : o.request_type === "camarero"
+                        ? "Marcar atendido"
+                        : col.action}
                     </button>
                   </div>
                 ))

@@ -37,6 +37,8 @@ export default function PublicBusinessPage({ params }) {
   const [done, setDone] = useState(false);
 
   const [tableNumber, setTableNumber] = useState(verifiedTable);
+  const [waiterCalled, setWaiterCalled] = useState(false);
+  const [callingWaiter, setCallingWaiter] = useState(false);
   const [cart, setCart] = useState({});
   const [orderSent, setOrderSent] = useState(false);
   const [viewProduct, setViewProduct] = useState(null);
@@ -163,7 +165,22 @@ export default function PublicBusinessPage({ params }) {
     setSending(false);
     setDone(true);
   }
-
+  async function handleCallWaiter() {
+    if (!verifiedTable) return;
+    setCallingWaiter(true);
+    await supabase.from("orders").insert({
+      business_id: business.id,
+      table_number: verifiedTable,
+      items: [],
+      total: 0,
+      status: "nuevo",
+      paid: true,
+      request_type: "camarero",
+    });
+    setCallingWaiter(false);
+    setWaiterCalled(true);
+    setTimeout(() => setWaiterCalled(false), 60000);
+  }
   async function handleSendOrderCounter() {
     if (!tableNumber) return;
     if (cartLines.length === 0) return;
@@ -590,7 +607,20 @@ export default function PublicBusinessPage({ params }) {
           }}
         />
       )}
-
+      {verifiedTable && !waiterCalled && (
+        <button
+          onClick={handleCallWaiter}
+          disabled={callingWaiter}
+          className="fixed bottom-5 left-5 z-40 bg-[#1E332B] text-white border border-white/20 rounded-full shadow-xl px-5 py-3.5 flex items-center gap-2 font-semibold text-sm disabled:opacity-60"
+        >
+          🔔 {callingWaiter ? "Avisando..." : "Llamar camarero"}
+        </button>
+      )}
+      {waiterCalled && (
+        <div className="fixed bottom-5 left-5 z-40 bg-green-600 text-white rounded-full shadow-xl px-5 py-3.5 flex items-center gap-2 font-semibold text-sm">
+          ✓ Camarero avisado
+        </div>
+      )}
       {cfg.hasTableOrders && mode === "pedido" && cartCount > 0 && !showCartDrawer && (
         <button
           onClick={() => setShowCartDrawer(true)}
