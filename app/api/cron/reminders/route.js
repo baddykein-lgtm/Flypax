@@ -2,21 +2,25 @@ import { NextResponse } from "next/server";
 import { resend } from "@/lib/resend";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
+// Se ejecuta una vez al dia por Vercel Cron (ver vercel.json). Busca
+// reservas confirmadas cuya fecha sea la de mañana, y les envia un
+// recordatorio por email si aun no se les envio. Aplica a cualquier
+// tipo de negocio (restaurante, peluqueria, clinica, taller...).
 export async function GET(request) {
   const auth = request.headers.get("authorization") || "";
   if (auth !== "Bearer " + process.env.CRON_SECRET) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  const now = new Date();
-  const windowStart = new Date(now.getTime() + 23 * 60 * 60 * 1000);
-  const windowEnd = new Date(now.getTime() + 25 * 60 * 60 * 1000);
+  const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  const tomorrowStr = tomorrow.toISOString().slice(0, 10);
 
   const { data: reservations } = await supabaseAdmin
     .from("reservations")
     .select("*, businesses(name, icon)")
     .eq("status", "confirmada")
     .eq("reminder_sent", false)
+    .eq("date", tomorrowStr)
     .not("client_email", "is", null);
 
   if (!reservations || reservations.length === 0) {
@@ -26,9 +30,6 @@ export async function GET(request) {
   let sent = 0;
 
   for (const r of reservations) {
-    const when = new Date(r.date + "T" + r.time + ":00");
-    if (when < windowStart || when > windowEnd) continue;
-
     const biz = r.businesses;
     const html =
       "<div style=\"font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#1B2A22;\">" +
@@ -46,7 +47,9 @@ export async function GET(request) {
       });
       await supabaseAdmin.from("reservations").update({ reminder_sent: true }).eq("id", r.id);
       sent++;
-    } catch (e) {}
+    } catch (e) {
+      // seguimos con las demas aunque una falle
+    }
   }
 
   return NextResponse.json({ sent });
