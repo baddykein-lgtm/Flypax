@@ -18,7 +18,7 @@ async function buildQrCanvas(url, size) {
   const canvas = document.createElement("canvas");
   await QRCode.toCanvas(canvas, url, {
     width: size,
-    margin: 1,
+    margin: 2,
     errorCorrectionLevel: "H",
     color: { dark: "#16231D", light: "#ffffff" },
   });
@@ -55,11 +55,12 @@ async function buildQrCanvas(url, size) {
 }
 
 function buildTableCard(qrCanvas, tableNumber) {
-  const pad = 24;
-  const labelHeight = 50;
+  const w = qrCanvas.width;
+  const pad = Math.round(w * 0.1);
+  const labelHeight = Math.round(w * 0.24);
   const canvas = document.createElement("canvas");
-  canvas.width = qrCanvas.width + pad * 2;
-  canvas.height = qrCanvas.height + pad * 2 + labelHeight;
+  canvas.width = w + pad * 2;
+  canvas.height = w + pad * 2 + labelHeight;
   const ctx = canvas.getContext("2d");
 
   ctx.fillStyle = "#ffffff";
@@ -67,9 +68,10 @@ function buildTableCard(qrCanvas, tableNumber) {
   ctx.drawImage(qrCanvas, pad, pad);
 
   ctx.fillStyle = "#16231D";
-  ctx.font = "bold 28px sans-serif";
+  ctx.font = "bold " + Math.round(w * 0.13) + "px sans-serif";
   ctx.textAlign = "center";
-  ctx.fillText("Mesa " + tableNumber, canvas.width / 2, canvas.height - labelHeight / 2 + 10);
+  ctx.textBaseline = "middle";
+  ctx.fillText("Mesa " + tableNumber, canvas.width / 2, canvas.height - labelHeight / 2 - pad * 0.1);
 
   return canvas;
 }
@@ -145,19 +147,23 @@ export default function QrPage() {
       const url = window.location.origin + "/" + business.slug;
       setPublicUrl(url);
 
-      const mainCanvas = await buildQrCanvas(url, 260);
+      // Se genera en alta resolucion y se muestra reducido en pantalla
+      const mainCanvas = await buildQrCanvas(url, 1024);
       if (cancelled) return;
       setMainQrDataUrl(mainCanvas.toDataURL("image/png"));
+      mainCanvas.style.width = "260px";
+      mainCanvas.style.height = "260px";
       if (canvasHolderRef.current) {
         canvasHolderRef.current.innerHTML = "";
         canvasHolderRef.current.appendChild(mainCanvas);
       }
+
       if (cfg.hasTableOrders) {
         const count = Math.min(Number(business.profile?.tables) || 6, 20);
         const cards = [];
         for (let n = 1; n <= count; n++) {
           const tableUrl = url + "?mesa=" + n;
-          const qrForTable = await buildQrCanvas(tableUrl, 200);
+          const qrForTable = await buildQrCanvas(tableUrl, 720);
           const card = buildTableCard(qrForTable, n);
           cards.push({ n, dataUrl: card.toDataURL("image/png") });
         }
