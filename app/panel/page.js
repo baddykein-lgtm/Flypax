@@ -17,7 +17,11 @@ export default function ResumenPage() {
     async function load() {
       const [{ data: res }, { data: ord }, { data: inv }, { count: prodCount }] = await Promise.all([
         supabase.from("reservations").select("*").eq("business_id", business.id).order("date", { ascending: true }),
-        supabase.from("orders").select("*").eq("business_id", business.id).neq("status", "entregado"),
+        supabase
+          .from("orders")
+          .select("id, total, paid, status, request_type")
+          .eq("business_id", business.id)
+          .neq("status", "pendiente_pago"),
         supabase.from("invoices").select("*").eq("business_id", business.id),
         supabase.from("products").select("id", { count: "exact", head: true }).eq("business_id", business.id),
       ]);
@@ -30,13 +34,21 @@ export default function ResumenPage() {
     load();
   }, [business.id]);
 
-  if (loading) return <p className="text-sm text-[#5b6b60]">Cargando…</p>;
+  if (loading) return <p className="text-sm text-[#5b6b60]">Cargando...</p>;
 
   const today = new Date().toISOString().slice(0, 10);
   const hoy = reservations.filter((r) => r.date === today && r.status !== "cancelada");
   const pendientesFactura = invoices.filter((i) => !i.paid).length;
-  const ingresos = invoices.filter((i) => i.paid).reduce((a, i) => a + Number(i.total), 0);
+  const ingresosFacturas = invoices.filter((i) => i.paid).reduce((a, i) => a + Number(i.total), 0);
   const proximas = reservations.filter((r) => r.status !== "cancelada").slice(0, 5);
+
+  // Pedidos reales (sin las llamadas a camarero)
+  const realOrders = orders.filter((o) => o.request_type !== "camarero");
+  const activeOrders = realOrders.filter((o) => o.status !== "entregado");
+  const paidOrders = realOrders.filter((o) => o.paid);
+  const unpaidOrders = realOrders.filter((o) => !o.paid);
+  const cobradoPedidos = paidOrders.reduce((a, o) => a + Number(o.total), 0);
+  const pendientePedidos = unpaidOrders.reduce((a, o) => a + Number(o.total), 0);
 
   return (
     <div>
@@ -54,16 +66,34 @@ export default function ResumenPage() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-4 gap-3.5 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-4">
         <Kpi label="Reservas hoy" value={hoy.length} />
         {cfg.hasTableOrders ? (
-          <Kpi label="Pedidos en mesa activos" value={orders.length} />
+          <Kpi label="Pedidos activos" value={activeOrders.length} />
         ) : (
           <Kpi label="Productos en tu carta" value={productCount} />
         )}
-        <Kpi label="Ingresos cobrados" value={`${ingresos}€`} note="Total" />
+        <Kpi label="Ingresos por facturas" value={`${ingresosFacturas.toFixed(2)}€`} note="Cobradas" />
         <Kpi label="Facturas pendientes" value={pendientesFactura} />
       </div>
+
+      {cfg.hasTableOrders && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-8">
+          <Kpi
+            label="Cobrado en pedidos"
+            value={`${cobradoPedidos.toFixed(2)}€`}
+            note={`${paidOrders.length} pedido${paidOrders.length === 1 ? "" : "s"}`}
+          />
+          <Kpi
+            label="Pendiente de cobrar"
+            value={`${pendientePedidos.toFixed(2)}€`}
+            note={`${unpaidOrders.length} pedido${unpaidOrders.length === 1 ? "" : "s"}`}
+            warn
+          />
+        </div>
+      )}
+
+      {!cfg.hasTableOrders && <div className="mb-4" />}
 
       <div className="bg-white border border-black/10 rounded-xl overflow-hidden">
         <div className="px-5 py-4 border-b border-black/10 font-semibold text-sm">Próximas reservas</div>
@@ -97,12 +127,12 @@ export default function ResumenPage() {
   );
 }
 
-function Kpi({ label, value, note }) {
+function Kpi({ label, value, note, warn }) {
   return (
     <div className="bg-white border border-black/10 rounded-xl p-4">
       <div className="text-xs text-[#5b6b60] font-semibold mb-2">{label}</div>
       <div className="font-display text-2xl">{value}</div>
-      {note && <div className="text-xs text-green-700 mt-1">{note}</div>}
+      {note && <div className={"text-xs mt-1 " + (warn ? "text-amber-700" : "text-green-700")}>{note}</div>}
     </div>
   );
 }

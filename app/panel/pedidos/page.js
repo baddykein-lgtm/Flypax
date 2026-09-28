@@ -54,6 +54,7 @@ export default function PedidosPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [advancingId, setAdvancingId] = useState(null);
+  const [payingId, setPayingId] = useState(null);
   const businessIdRef = useRef(business.id);
 
   async function loadOrders() {
@@ -126,9 +127,28 @@ export default function PedidosPage() {
     };
   }, [business.id]);
 
+  async function markPaid(order) {
+    setPayingId(order.id);
+    const { error } = await supabase.from("orders").update({ paid: true }).eq("id", order.id);
+    setPayingId(null);
+    if (error) {
+      alert("No se pudo marcar como cobrado: " + error.message);
+      return;
+    }
+    setOrders((prev) => prev.map((o) => (o.id === order.id ? { ...o, paid: true } : o)));
+  }
+
   async function advance(order, next) {
     setAdvancingId(order.id);
-    const { error } = await supabase.from("orders").update({ status: next }).eq("id", order.id);
+
+    const changes = { status: next };
+    if (next === "entregado" && !order.paid && order.request_type !== "camarero") {
+      if (window.confirm("¿Has cobrado este pedido?")) {
+        changes.paid = true;
+      }
+    }
+
+    const { error } = await supabase.from("orders").update(changes).eq("id", order.id);
     if (error) {
       setAdvancingId(null);
       alert("No se pudo actualizar el pedido: " + error.message);
@@ -222,6 +242,15 @@ export default function PedidosPage() {
                             </span>
                           )}
                         </div>
+                        {!o.paid && (
+                          <button
+                            onClick={() => markPaid(o)}
+                            disabled={payingId === o.id}
+                            className="w-full border border-green-700 text-green-700 font-semibold py-1.5 rounded-full text-xs mb-2 disabled:opacity-60"
+                          >
+                            {payingId === o.id ? "..." : "Marcar como cobrado"}
+                          </button>
+                        )}
                       </>
                     )}
                     <button
