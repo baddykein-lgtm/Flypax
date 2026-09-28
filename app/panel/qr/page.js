@@ -74,6 +74,57 @@ function buildTableCard(qrCanvas, tableNumber) {
   return canvas;
 }
 
+function dataUrlToBlob(dataUrl) {
+  const parts = dataUrl.split(",");
+  const mime = parts[0].match(/:(.*?);/)[1];
+  const bytes = atob(parts[1]);
+  const arr = new Uint8Array(bytes.length);
+  for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+  return new Blob([arr], { type: mime });
+}
+
+function isMobileDevice() {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  const isIpadOs = /Macintosh/.test(ua) && navigator.maxTouchPoints > 1;
+  return /Android|iPhone|iPad|iPod/i.test(ua) || isIpadOs;
+}
+
+function classicDownload(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+
+// items: [{ dataUrl, filename }]
+// En movil abre el menu de compartir (Guardar imagen, WhatsApp...);
+// en ordenador (o si el movil no lo soporta) descarga de forma clasica.
+async function saveImages(items) {
+  const blobs = items.map((i) => dataUrlToBlob(i.dataUrl));
+
+  if (isMobileDevice() && navigator.canShare && navigator.share) {
+    const files = items.map((i, idx) => new File([blobs[idx]], i.filename, { type: "image/png" }));
+    if (navigator.canShare({ files })) {
+      try {
+        await navigator.share({ files, title: "QR" });
+        return;
+      } catch (e) {
+        if (e && e.name === "AbortError") return;
+      }
+    }
+  }
+
+  items.forEach((i, idx) => {
+    setTimeout(() => classicDownload(blobs[idx], i.filename), idx * 250);
+  });
+}
+
 export default function QrPage() {
   const { business, cfg } = useBusiness();
   const canvasHolderRef = useRef(null);
@@ -81,6 +132,11 @@ export default function QrPage() {
   const [mainQrDataUrl, setMainQrDataUrl] = useState("");
   const [tableCards, setTableCards] = useState([]);
   const [building, setBuilding] = useState(true);
+  const [mobile, setMobile] = useState(false);
+
+  useEffect(() => {
+    setMobile(isMobileDevice());
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -118,21 +174,18 @@ export default function QrPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [business.slug]);
 
-  function downloadDataUrl(dataUrl, filename) {
-    const a = document.createElement("a");
-    a.href = dataUrl;
-    a.download = filename;
-    a.click();
+  function downloadMainQr() {
+    if (mainQrDataUrl) saveImages([{ dataUrl: mainQrDataUrl, filename: "qr-" + business.slug + ".png" }]);
   }
 
-  function downloadMainQr() {
-    if (mainQrDataUrl) downloadDataUrl(mainQrDataUrl, "qr-" + business.slug + ".png");
+  function downloadOneTable(t) {
+    saveImages([{ dataUrl: t.dataUrl, filename: "mesa-" + t.n + "-" + business.slug + ".png" }]);
   }
 
   function downloadAllTables() {
-    tableCards.forEach((t, i) => {
-      setTimeout(() => downloadDataUrl(t.dataUrl, "mesa-" + t.n + "-" + business.slug + ".png"), i * 200);
-    });
+    saveImages(
+      tableCards.map((t) => ({ dataUrl: t.dataUrl, filename: "mesa-" + t.n + "-" + business.slug + ".png" }))
+    );
   }
 
   return (
@@ -147,32 +200,37 @@ export default function QrPage() {
       <div className="bg-white border border-black/10 rounded-xl p-6 flex flex-wrap gap-8 mb-6">
         <div className="bg-white p-4 rounded-xl border border-black/10 flex-shrink-0" ref={canvasHolderRef} />
         <div className="flex-1 min-w-[220px]">
-          <div className="bg-[#F0ECE1] rounded-lg px-3 py-2.5 text-sm mb-4 inline-block">{publicUrl}</div>
+          <div className="bg-[#F0ECE1] rounded-lg px-3 py-2.5 text-sm mb-4 inline-block break-all">{publicUrl}</div>
           <p className="text-sm text-[#5b6b60] mb-5 max-w-sm">
             {cfg.hasTableOrders
               ? "Es el mismo codigo para todo el negocio: imprimelo tantas veces como mesas tengas, o descarga las tarjetas individuales de abajo, ya con el numero de mesa incluido."
-              : 'Cada persona que escanea este QR ve tu carta o servicios y puede reservar.'}
+              : "Cada persona que escanea este QR ve tu carta o servicios y puede reservar."}
           </p>
           <button
             onClick={downloadMainQr}
             disabled={building}
             className="bg-mustard text-ink font-semibold px-5 py-2.5 rounded-full text-sm disabled:opacity-50"
           >
-            Descargar QR
+            {mobile ? "Guardar / compartir QR" : "Descargar QR"}
           </button>
+          {mobile && (
+            <p className="text-xs text-[#8a958d] mt-2 max-w-xs">
+              Se abrira el menu de tu movil: elige "Guardar imagen" para dejarla en tu galeria.
+            </p>
+          )}
         </div>
       </div>
 
       {cfg.hasTableOrders && (
         <div className="bg-white border border-black/10 rounded-xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-black/10 flex items-center justify-between">
+          <div className="px-5 py-4 border-b border-black/10 flex items-center justify-between gap-3">
             <h3 className="font-semibold text-sm">Tarjetas por mesa ({tableCards.length})</h3>
             <button
               onClick={downloadAllTables}
               disabled={building || tableCards.length === 0}
               className="text-xs font-semibold border border-black/15 rounded-full px-3.5 py-1.5 disabled:opacity-50"
             >
-              Descargar todas
+              {mobile ? "Guardar todas" : "Descargar todas"}
             </button>
           </div>
           <div className="grid grid-cols-3 md:grid-cols-6 gap-3 p-5">
@@ -180,10 +238,10 @@ export default function QrPage() {
               <div key={t.n} className="border border-black/10 rounded-lg p-2 text-center">
                 <img src={t.dataUrl} alt={"QR mesa " + t.n} className="w-full rounded mb-2" />
                 <button
-                  onClick={() => downloadDataUrl(t.dataUrl, "mesa-" + t.n + "-" + business.slug + ".png")}
+                  onClick={() => downloadOneTable(t)}
                   className="text-xs font-semibold text-[#5b6b60] underline"
                 >
-                  Descargar
+                  {mobile ? "Guardar" : "Descargar"}
                 </button>
               </div>
             ))}
