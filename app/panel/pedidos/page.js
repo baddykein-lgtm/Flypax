@@ -28,11 +28,18 @@ function playNotificationSound() {
   } catch (e) {}
 }
 
-function notifyTitle(order) {
+function isPickup(order) {
+  return order.fulfillment === "recoger";
+}
+
+function notifyTitle(order, paid) {
   if (order.request_type === "camarero") {
     return "🔔 Mesa " + order.table_number + " solicita camarero";
   }
-  return "Nuevo pedido - Mesa " + order.table_number;
+  if (isPickup(order)) {
+    return (paid ? "Pedido para llevar pagado" : "Nuevo pedido para llevar") + " - " + (order.client_name || "cliente");
+  }
+  return (paid ? "Pedido pagado" : "Nuevo pedido") + " - Mesa " + order.table_number;
 }
 
 function notifyBody(order) {
@@ -82,7 +89,7 @@ export default function PedidosPage() {
           setOrders((prev) => [...prev, payload.new]);
           playNotificationSound();
           if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-            new Notification(notifyTitle(payload.new), {
+            new Notification(notifyTitle(payload.new, false), {
               body: notifyBody(payload.new),
               icon: "/logo.png",
             });
@@ -103,7 +110,7 @@ export default function PedidosPage() {
             }
             playNotificationSound();
             if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-              new Notification("Pedido pagado - Mesa " + payload.new.table_number, {
+              new Notification(notifyTitle(payload.new, true), {
                 body: notifyBody(payload.new),
                 icon: "/logo.png",
               });
@@ -119,13 +126,31 @@ export default function PedidosPage() {
     };
   }, [business.id]);
 
-  async function advance(id, next) {
-    setAdvancingId(id);
-    const { error } = await supabase.from("orders").update({ status: next }).eq("id", id);
-    setAdvancingId(null);
+  async function advance(order, next) {
+    setAdvancingId(order.id);
+    const { error } = await supabase.from("orders").update({ status: next }).eq("id", order.id);
     if (error) {
+      setAdvancingId(null);
       alert("No se pudo actualizar el pedido: " + error.message);
+      return;
     }
+
+    if (next === "listo" && isPickup(order) && order.client_email) {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (session) {
+          await fetch("/api/orders/notify-ready", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token: session.access_token, orderId: order.id }),
+          });
+        }
+      } catch (e) {}
+    }
+
+    setAdvancingId(null);
   }
 
   if (loading) return <p className="text-sm text-[#5b6b60]">Cargando...</p>;
@@ -133,9 +158,9 @@ export default function PedidosPage() {
   return (
     <div>
       <div className="mb-7">
-        <h1 className="font-display text-2xl">Pedidos en mesa</h1>
+        <h1 className="font-display text-2xl">Pedidos</h1>
         <p className="text-sm text-[#5b6b60] mt-1">
-          Lo que tus clientes piden desde la mesa, en tiempo real - como una comanda digital.
+          Pedidos en mesa y para llevar, en tiempo real - como una comanda digital.
         </p>
       </div>
 
@@ -171,11 +196,15 @@ export default function PedidosPage() {
                       <>
                         <div className="flex justify-between text-sm font-bold mb-1">
                           <span>
-                            Mesa {o.table_number}
-                            {o.client_name ? " - " + o.client_name : ""}
+                            {isPickup(o)
+                              ? "🥡 Para llevar - " + (o.client_name || "cliente")
+                              : "Mesa " + o.table_number + (o.client_name ? " - " + o.client_name : "")}
                           </span>
                           <span>{Number(o.total).toFixed(2)} EUR</span>
                         </div>
+                        {isPickup(o) && o.client_email && (
+                          <div className="text-xs text-[#8a958d] mb-1">Se le avisara por email cuando este listo</div>
+                        )}
                         <div className="text-xs text-[#5b6b60] mb-2">
                           {(o.items || []).map((l, i) => (
                             <div key={i}>
@@ -188,13 +217,15 @@ export default function PedidosPage() {
                           {o.paid ? (
                             <span className="font-bold text-green-700">Pagado</span>
                           ) : (
-                            <span className="font-bold text-amber-700">Cobrar en mesa</span>
+                            <span className="font-bold text-amber-700">
+                              {isPickup(o) ? "Cobrar al recoger" : "Cobrar en mesa"}
+                            </span>
                           )}
                         </div>
                       </>
                     )}
                     <button
-                      onClick={() => advance(o.id, col.next)}
+                      onClick={() => advance(o, col.next)}
                       disabled={advancingId === o.id}
                       className="w-full bg-mustard text-ink font-semibold py-1.5 rounded-full text-xs disabled:opacity-60"
                     >
